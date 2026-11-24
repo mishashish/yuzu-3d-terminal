@@ -539,15 +539,18 @@ export function initUI(stage) {
         <li><b>Terminal Host:</b> Tracks live crypto markets, voices pump &amp; dump briefs, demonstrates her 3D X-ray skeleton rig, and forges custom chrome/glass 3D medallions.</li>
       </ul>`,
     extension: `
-      <h3>CHROME EXTENSION // CRYPTO COMPANION</h3>
-      <p>Install Yuzu directly into Google Chrome, Brave, or Edge to track <b>SOL, BTC, ETH, WIF, BONK, PEPE, JUP</b> 24h pumps &amp; dumps with voice briefs and a live floating widget.</p>
+      <h3>CHROME EXTENSION // CRYPTO COMPANION (v1.1.0)</h3>
+      <p>Install Yuzu directly into Google Chrome, Brave, or Edge to track <b>SOL, BTC, ETH, WIF, BONK, PEPE, JUP</b> 24h pumps &amp; dumps with voice briefs, desktop alerts, and a draggable floating widget.</p>
+      <div style="margin:8px 0 12px">
+        <a class="gloss-btn gloss-pink" href="/yuzu-chrome-extension.zip" download="yuzu-chrome-extension.zip" style="width:100%;text-align:center">DOWNLOAD CHROME EXTENSION (.ZIP)</a>
+      </div>
       <ul>
-        <li><b>Step 1:</b> Open <code>chrome://extensions/</code> in your browser.</li>
-        <li><b>Step 2:</b> Enable <b>Developer mode</b> in the top right.</li>
-        <li><b>Step 3:</b> Click <b>Load unpacked</b>.</li>
-        <li><b>Step 4:</b> Select the folder <code>C:\\Users\\yoiso\\.gemini\\antigravity\\scratch\\yuzuha-simulator\\extension</code></li>
+        <li><b>Step 1:</b> Click <b>DOWNLOAD CHROME EXTENSION (.ZIP)</b> above and unzip the folder.</li>
+        <li><b>Step 2:</b> Open <code>chrome://extensions/</code> in Chrome, Brave, or Edge.</li>
+        <li><b>Step 3:</b> Turn on <b>Developer mode</b> (top-right toggle).</li>
+        <li><b>Step 4:</b> Click <b>Load unpacked</b> and select the unzipped folder.</li>
       </ul>
-      <p>Click the <b>$YUZU</b> icon in your toolbar to open the Cyber Y2K Crypto Radar, live badge, and floating page widget.</p>`,
+      <p>Pin <b>$YUZU RADAR</b> to your browser toolbar for live SOL badge updates, TradingView links, and voice market briefs.</p>`,
     overview: `
       <h3>01 // PROJECT OVERVIEW</h3>
       <p><b>$${TOKEN.ticker}</b> is an interactive Cyber Y2K art memecoin on Solana powered by a living 3D VRM companion right inside the web terminal.</p>
