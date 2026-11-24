@@ -444,13 +444,10 @@ export function initUI(stage) {
         stage.setCameraPreset('hero');
         break;
       case 'OUTFIT': {
-        const next = !stage.openOutfit;
-        stage.setOpenOutfit(next);
-        const btn = $('#btn-outfit-mode');
-        if (btn) {
-          btn.classList.toggle('active', next);
-          btn.textContent = next ? 'OPEN OUTFIT' : 'FULL OUTFIT';
-        }
+        const order = ['full', 'open', 'beach'];
+        const nextMode = order[(order.indexOf(stage.outfitMode) + 1) % order.length];
+        stage.setOutfitMode(nextMode);
+        $$('#outfit-chips [data-outfit]').forEach((b) => b.classList.toggle('active', b.dataset.outfit === nextMode));
         break;
       }
       case 'BAND1':
@@ -539,15 +536,16 @@ export function initUI(stage) {
         <li><b>Terminal Host:</b> Tracks live crypto markets, voices pump &amp; dump briefs, demonstrates her 3D X-ray skeleton rig, and forges custom chrome/glass 3D medallions.</li>
       </ul>`,
     extension: `
-      <h3>CHROME EXTENSION // CRYPTO COMPANION (v1.1.0)</h3>
-      <p>Install Yuzu directly into Chrome, Brave, or Edge to track <b>SOL, BTC, ETH, WIF, BONK, PEPE, JUP</b> 24h pumps &amp; dumps with voice briefs, desktop alerts, and a draggable floating widget.</p>
-      <div class="btn-row" style="margin:8px 0 12px">
-        <a class="gloss-btn gloss-pink" href="/yuzu-chrome-extension.crx" download="yuzu-chrome-extension.crx">DOWNLOAD .CRX (1 FILE)</a>
-        <a class="gloss-btn" href="/yuzu-chrome-extension.zip" download="yuzu-chrome-extension.zip">DOWNLOAD .ZIP (FOLDER)</a>
+      <h3>CHROME EXTENSION // CRYPTO COMPANION (v1.2.0)</h3>
+      <p>Install Yuzu directly into Chrome, Brave, or Edge to track <b>SOL, BTC, ETH, WIF, BONK, PEPE, JUP</b> 24h pumps &amp; dumps with a live mini 3D Yuzu, voice briefs, desktop alerts, and a draggable floating widget.</p>
+      <div style="margin:8px 0 12px">
+        <a class="gloss-btn gloss-pink" href="/yuzu-chrome-extension.zip" download="yuzu-chrome-extension.zip" style="width:100%;text-align:center">DOWNLOAD CHROME EXTENSION (.ZIP)</a>
       </div>
       <ul>
-        <li><b>Fastest (1 File .CRX):</b> Open <code>chrome://extensions/</code>, turn on <b>Developer mode</b> (top-right), and <b>drag &amp; drop</b> <code>yuzu-chrome-extension.crx</code> directly onto the page.</li>
-        <li><b>Alternative (.ZIP Folder):</b> Unzip <code>yuzu-chrome-extension.zip</code> → click <b>Load unpacked</b> → select the <code>yuzu-extension</code> folder.</li>
+        <li><b>Step 1:</b> Click <b>DOWNLOAD CHROME EXTENSION (.ZIP)</b> above and unzip the <code>yuzu-extension</code> folder.</li>
+        <li><b>Step 2:</b> Open <code>chrome://extensions/</code> in Chrome, Brave, or Edge.</li>
+        <li><b>Step 3:</b> Turn on <b>Developer mode</b> (top-right toggle).</li>
+        <li><b>Step 4:</b> Click <b>Load unpacked</b> and select the unzipped <code>yuzu-extension</code> folder.</li>
       </ul>
       <p>Pin <b>$YUZU RADAR</b> to your browser toolbar for live SOL badge updates, TradingView links, and voice market briefs.</p>`,
     overview: `
@@ -704,13 +702,21 @@ export function initUI(stage) {
     btnSpin.classList.toggle('active', next);
   });
 
-  // Open / Full Outfit toggle
-  const btnOutfit = $('#btn-outfit-mode');
-  btnOutfit?.addEventListener('click', () => {
-    const next = !stage.openOutfit;
-    stage.setOpenOutfit(next);
-    btnOutfit.classList.toggle('active', next);
-    btnOutfit.textContent = next ? 'OPEN OUTFIT' : 'FULL OUTFIT';
+  // 3-Mode Outfit Switcher (FULL / CYBER / BEACH)
+  $$('#outfit-chips [data-outfit]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      $$('#outfit-chips [data-outfit]').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const mode = btn.dataset.outfit;
+      stage.setOutfitMode(mode);
+      if (mode === 'beach') {
+        stage.react('peace', null, 'Summer beach mode unlocked! Ready for the Solana sun~');
+      } else if (mode === 'open') {
+        stage.react('spin', null, 'Switched to Cyber Y2K outfit!');
+      } else {
+        stage.react('happy', null, 'Back in full outfit!');
+      }
+    });
   });
 
   // Scroll-linked camera, active nav link & Yuzu contextual section hints

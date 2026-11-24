@@ -131,7 +131,7 @@ export class CharacterStage {
     };
     this.turntable = false;
     this.turntableAngle = 0;
-    this.openOutfit = false;
+    this.outfitMode = 'full'; // 'full' | 'open' | 'beach'
     this.viewMode = 'normal'; // 'normal' | 'skeleton' | 'wireframe'
     this.skeletonHelper = null;
     this.jointMarkers = [];
@@ -787,7 +787,7 @@ export class CharacterStage {
       if (AC) this.audioCtx = new AC();
     }
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume().catch(() => {});
+      this.audioCtx.resume().catch(() => { });
     }
   }
 
@@ -873,24 +873,24 @@ export class CharacterStage {
 
     const bodyMat = isGlass
       ? new THREE.MeshPhysicalMaterial({
-          color: rimTint,
-          metalness: 0.12,
-          roughness: 0.06,
-          transmission: 0.78,
-          thickness: 0.45,
-          ior: 1.5,
-          iridescence: 1.0,
-          clearcoat: 1.0,
-        })
+        color: rimTint,
+        metalness: 0.12,
+        roughness: 0.06,
+        transmission: 0.78,
+        thickness: 0.45,
+        ior: 1.5,
+        iridescence: 1.0,
+        clearcoat: 1.0,
+      })
       : new THREE.MeshPhysicalMaterial({
-          color: rimTint,
-          metalness: 0.94,
-          roughness: 0.10,
-          iridescence: 1.0,
-          iridescenceIOR: 1.4,
-          iridescenceThicknessRange: [180, 560],
-          clearcoat: 1.0,
-        });
+        color: rimTint,
+        metalness: 0.94,
+        roughness: 0.10,
+        iridescence: 1.0,
+        iridescenceIOR: 1.4,
+        iridescenceThicknessRange: [180, 560],
+        clearcoat: 1.0,
+      });
     const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
     grp.add(bodyMesh);
 
@@ -920,12 +920,16 @@ export class CharacterStage {
     this.floatingLogo = grp;
   }
 
-  setOpenOutfit(on) {
-    this.openOutfit = !!on;
+  setOutfitMode(mode = 'full') {
+    this.outfitMode = mode;
     if (this.vrm) {
-      this._applyOutfitStyle(this.vrm, this.openOutfit);
+      this._applyOutfitStyle(this.vrm, this.outfitMode);
       if (this.viewMode !== 'normal') this.setViewMode(this.viewMode);
     }
+  }
+
+  setOpenOutfit(on) {
+    this.setOutfitMode(on ? 'open' : 'full');
   }
 
   getRigStats() {
@@ -1019,7 +1023,8 @@ export class CharacterStage {
     }
   }
 
-  _applyOutfitStyle(vrm, open) {
+  _applyOutfitStyle(vrm, mode = 'full') {
+    const style = mode === true ? 'open' : mode === false ? 'full' : (mode || 'full');
     const makeTex = (canvas, orig) => {
       const tex = new THREE.CanvasTexture(canvas);
       tex.flipY = orig.flipY;
@@ -1028,6 +1033,66 @@ export class CharacterStage {
       tex.wrapT = orig.wrapT;
       tex.needsUpdate = true;
       return tex;
+    };
+
+    const paintBaseSkin = (ctx, w, h) => {
+      const skinBase = '#f8e7e3';
+      const skinEdge = '#f2d0cc';
+      const skinBlush = 'rgba(236, 179, 179, 0.28)';
+      const skinShadow = 'rgba(210, 152, 152, 0.34)';
+
+      // 1. Fill transparent torso & upper-arm cutouts behind existing neck/forearm shading
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.fillStyle = skinBase;
+      ctx.fillRect(0, 0, w, Math.round(h * 0.46));
+      ctx.restore();
+
+      // Seamless cylindrical shading on upper arms
+      for (const x0 of [0, w * 0.76]) {
+        const aw = w * 0.24;
+        const ag = ctx.createLinearGradient(x0, 0, x0 + aw, 0);
+        ag.addColorStop(0, skinEdge);
+        ag.addColorStop(0.24, skinBase);
+        ag.addColorStop(0.76, skinBase);
+        ag.addColorStop(1, skinEdge);
+        ctx.fillStyle = ag;
+        ctx.fillRect(x0, 0, aw, h * 0.235);
+        const blend = ctx.createLinearGradient(0, h * 0.22, 0, h * 0.255);
+        blend.addColorStop(0, 'rgba(248,231,227,0.75)');
+        blend.addColorStop(1, 'rgba(248,231,227,0)');
+        ctx.fillStyle = blend;
+        ctx.fillRect(x0, h * 0.22, aw, h * 0.035);
+      }
+
+      // Soft collarbone & upper chest blush shading
+      const chestGrad = ctx.createRadialGradient(w * 0.5, h * 0.16, w * 0.01, w * 0.5, h * 0.16, w * 0.15);
+      chestGrad.addColorStop(0, skinBlush);
+      chestGrad.addColorStop(1, 'rgba(248,231,227,0)');
+      ctx.fillStyle = chestGrad;
+      ctx.fillRect(w * 0.30, h * 0.09, w * 0.40, h * 0.14);
+
+      // Bare midriff / waist with soft side contours & delicate navel
+      ctx.fillStyle = skinBase;
+      ctx.fillRect(w * 0.24, h * 0.305, w * 0.52, h * 0.165);
+      const waistG = ctx.createLinearGradient(w * 0.24, 0, w * 0.76, 0);
+      waistG.addColorStop(0, skinEdge);
+      waistG.addColorStop(0.18, 'rgba(248,231,227,0)');
+      waistG.addColorStop(0.82, 'rgba(248,231,227,0)');
+      waistG.addColorStop(1, skinEdge);
+      ctx.fillStyle = waistG;
+      ctx.fillRect(w * 0.24, h * 0.305, w * 0.52, h * 0.165);
+      const ubShadow = ctx.createLinearGradient(0, h * 0.312, 0, h * 0.342);
+      ubShadow.addColorStop(0, skinShadow);
+      ubShadow.addColorStop(1, 'rgba(248,231,227,0)');
+      ctx.fillStyle = ubShadow;
+      ctx.fillRect(w * 0.24, h * 0.312, w * 0.52, h * 0.030);
+      ctx.fillStyle = skinShadow;
+      ctx.beginPath();
+      ctx.ellipse(w * 0.50, h * 0.402, w * 0.004, h * 0.008, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      return { skinBase, skinEdge, skinShadow };
     };
 
     vrm.scene.traverse((o) => {
@@ -1046,14 +1111,13 @@ export class CharacterStage {
           mat.userData._origNormal = mat.normalMap || null;
         }
 
-        // Hide the bulky floral A-line dress completely in Open mode so the sleek fitted Y2K outfit shines
         if (isTops) {
-          mat.visible = !open;
+          mat.visible = style === 'full';
           mat.needsUpdate = true;
           continue;
         }
 
-        if (!open) {
+        if (style === 'full') {
           mat.map = mat.userData._origMap;
           if ('shadeMultiplyTexture' in mat) mat.shadeMultiplyTexture = mat.userData._origShade;
           if ('normalMap' in mat) mat.normalMap = mat.userData._origNormal;
@@ -1061,7 +1125,8 @@ export class CharacterStage {
           continue;
         }
 
-        if (!mat.userData._openMap) {
+        const cacheKey = style === 'beach' ? '_beachMap' : '_openMap';
+        if (!mat.userData[cacheKey]) {
           const orig = mat.userData._origMap;
           const img = orig.image;
           const w = img.naturalWidth || img.width || 1024;
@@ -1072,202 +1137,221 @@ export class CharacterStage {
           const ctx = c.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
 
-          // Exact anime skin palette sampled from her forearms & collarbone
-          const skinBase = '#f8e7e3';
-          const skinEdge = '#f2d0cc';
-          const skinBlush = 'rgba(236, 179, 179, 0.28)';
-          const skinShadow = 'rgba(210, 152, 152, 0.34)';
+          const { skinBase, skinEdge, skinShadow } = paintBaseSkin(ctx, w, h);
 
-          // 1. Fill transparent torso & upper-arm cutouts behind existing neck/forearm shading
-          ctx.save();
-          ctx.globalCompositeOperation = 'destination-over';
-          ctx.fillStyle = skinBase;
-          ctx.fillRect(0, 0, w, Math.round(h * 0.46));
-          ctx.restore();
+          if (style === 'beach') {
+            // === CYBER Y2K SUMMER BEACH SWIMWEAR OUTFIT ===
+            // 1. Tropical Pink-to-Aqua Iridescent Halter Bikini Top (y: 0.195..0.305)
+            const bTop = ctx.createLinearGradient(w * 0.32, h * 0.19, w * 0.68, h * 0.30);
+            bTop.addColorStop(0, '#ff6ec7');
+            bTop.addColorStop(0.5, '#ff9ad5');
+            bTop.addColorStop(1, '#5ae4ff');
+            ctx.fillStyle = bTop;
+            // Two sleek triangle bikini cups connected by a thin under-band
+            ctx.beginPath();
+            ctx.moveTo(w * 0.37, h * 0.296);
+            ctx.quadraticCurveTo(w * 0.42, h * 0.195, w * 0.458, h * 0.198);
+            ctx.quadraticCurveTo(w * 0.492, h * 0.255, w * 0.50, h * 0.285);
+            ctx.quadraticCurveTo(w * 0.508, h * 0.255, w * 0.542, h * 0.198);
+            ctx.quadraticCurveTo(w * 0.58, h * 0.195, w * 0.63, h * 0.296);
+            ctx.closePath();
+            ctx.fill();
 
-          // Seamless cylindrical shading on upper arms (eliminates arm seam at y=0.23)
-          for (const x0 of [0, w * 0.76]) {
-            const aw = w * 0.24;
-            const ag = ctx.createLinearGradient(x0, 0, x0 + aw, 0);
-            ag.addColorStop(0, skinEdge);
-            ag.addColorStop(0.24, skinBase);
-            ag.addColorStop(0.76, skinBase);
-            ag.addColorStop(1, skinEdge);
-            ctx.fillStyle = ag;
-            ctx.fillRect(x0, 0, aw, h * 0.235);
-            // Feather blend into existing forearm
-            const blend = ctx.createLinearGradient(0, h * 0.22, 0, h * 0.255);
-            blend.addColorStop(0, 'rgba(248,231,227,0.75)');
-            blend.addColorStop(1, 'rgba(248,231,227,0)');
-            ctx.fillStyle = blend;
-            ctx.fillRect(x0, h * 0.22, aw, h * 0.035);
-          }
+            // Crisp white/pearl bikini trim & thin halter/back strings
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = Math.max(2, w * 0.003);
+            ctx.stroke();
 
-          // Soft collarbone & upper chest blush shading
-          const chestGrad = ctx.createRadialGradient(w * 0.5, h * 0.16, w * 0.01, w * 0.5, h * 0.16, w * 0.15);
-          chestGrad.addColorStop(0, skinBlush);
-          chestGrad.addColorStop(1, 'rgba(248,231,227,0)');
-          ctx.fillStyle = chestGrad;
-          ctx.fillRect(w * 0.30, h * 0.09, w * 0.40, h * 0.14);
+            // Thin back strap + halter neck ties
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(w * 0.24, h * 0.282, w * 0.52, h * 0.007);
+            ctx.strokeStyle = '#ff8bcb';
+            ctx.lineWidth = Math.max(3, w * 0.005);
+            ctx.beginPath();
+            ctx.moveTo(w * 0.456, h * 0.200);
+            ctx.lineTo(w * 0.476, h * 0.068);
+            ctx.moveTo(w * 0.544, h * 0.200);
+            ctx.lineTo(w * 0.524, h * 0.068);
+            ctx.stroke();
 
-          // 2. Bare midriff / waist (y: 0.305..0.448) with soft side contours & delicate navel
-          ctx.fillStyle = skinBase;
-          ctx.fillRect(w * 0.24, h * 0.305, w * 0.52, h * 0.145);
-          const waistG = ctx.createLinearGradient(w * 0.24, 0, w * 0.76, 0);
-          waistG.addColorStop(0, skinEdge);
-          waistG.addColorStop(0.18, 'rgba(248,231,227,0)');
-          waistG.addColorStop(0.82, 'rgba(248,231,227,0)');
-          waistG.addColorStop(1, skinEdge);
-          ctx.fillStyle = waistG;
-          ctx.fillRect(w * 0.24, h * 0.305, w * 0.52, h * 0.145);
-          // Subtle under-bust shadow on upper midriff
-          const ubShadow = ctx.createLinearGradient(0, h * 0.312, 0, h * 0.342);
-          ubShadow.addColorStop(0, skinShadow);
-          ubShadow.addColorStop(1, 'rgba(248,231,227,0)');
-          ctx.fillStyle = ubShadow;
-          ctx.fillRect(w * 0.24, h * 0.312, w * 0.52, h * 0.030);
-          // Delicate anime navel
-          ctx.fillStyle = skinShadow;
-          ctx.beginPath();
-          ctx.ellipse(w * 0.50, h * 0.402, w * 0.004, h * 0.008, 0, 0, Math.PI * 2);
-          ctx.fill();
+            // 2. Bare hips + Tropical Pink/Aqua Beach Bikini Bottoms (high-leg V-cut!)
+            ctx.fillStyle = skinBase;
+            ctx.fillRect(w * 0.24, h * 0.445, w * 0.52, h * 0.165);
+            const hipG = ctx.createLinearGradient(w * 0.24, 0, w * 0.76, 0);
+            hipG.addColorStop(0, skinEdge);
+            hipG.addColorStop(0.2, 'rgba(248,231,227,0)');
+            hipG.addColorStop(0.8, 'rgba(248,231,227,0)');
+            hipG.addColorStop(1, skinEdge);
+            ctx.fillStyle = hipG;
+            ctx.fillRect(w * 0.24, h * 0.445, w * 0.52, h * 0.165);
 
-          // 3. Glamorous Cyber Y2K Plunge-Sweetheart Halter Crop Top with Front Keyhole Cutout (y: 0.195..0.305)
-          const topGrad = ctx.createLinearGradient(0, h * 0.195, 0, h * 0.305);
-          topGrad.addColorStop(0, '#22182e');
-          topGrad.addColorStop(0.45, '#100c16');
-          topGrad.addColorStop(1, '#1c1428');
-          ctx.fillStyle = topGrad;
-          ctx.beginPath();
-          ctx.moveTo(w * 0.24, h * 0.240);
-          ctx.quadraticCurveTo(w * 0.34, h * 0.246, w * 0.40, h * 0.212);
-          ctx.quadraticCurveTo(w * 0.45, h * 0.188, w * 0.50, h * 0.236);
-          ctx.quadraticCurveTo(w * 0.55, h * 0.188, w * 0.60, h * 0.212);
-          ctx.quadraticCurveTo(w * 0.66, h * 0.246, w * 0.76, h * 0.240);
-          ctx.lineTo(w * 0.76, h * 0.304);
-          ctx.lineTo(w * 0.24, h * 0.304);
-          ctx.closePath();
-          ctx.fill();
+            const bBot = ctx.createLinearGradient(w * 0.30, h * 0.46, w * 0.70, h * 0.58);
+            bBot.addColorStop(0, '#5ae4ff');
+            bBot.addColorStop(0.5, '#ff8bcb');
+            bBot.addColorStop(1, '#ff6ec7');
+            ctx.fillStyle = bBot;
+            // Sleek side-tie bikini bottoms (full coverage bottom + clean side straps)
+            ctx.fillRect(w * 0.24, h * 0.468, w * 0.52, h * 0.018);
+            ctx.beginPath();
+            ctx.moveTo(w * 0.36, h * 0.468);
+            ctx.lineTo(w * 0.64, h * 0.468);
+            ctx.quadraticCurveTo(w * 0.58, h * 0.555, w * 0.54, h * 0.605);
+            ctx.lineTo(w * 0.46, h * 0.605);
+            ctx.quadraticCurveTo(w * 0.42, h * 0.555, w * 0.36, h * 0.468);
+            ctx.closePath();
+            ctx.fill();
+            // Back coverage
+            ctx.fillRect(w * 0.24, h * 0.475, w * 0.14, h * 0.12);
+            ctx.fillRect(w * 0.62, h * 0.475, w * 0.14, h * 0.12);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(w * 0.24, h * 0.467, w * 0.52, h * 0.003);
 
-          // Stylish front diamond keyhole cutout revealing soft skin & metallic pink/chrome ring
-          ctx.fillStyle = skinBase;
-          ctx.beginPath();
-          ctx.moveTo(w * 0.50, h * 0.234);
-          ctx.lineTo(w * 0.520, h * 0.264);
-          ctx.lineTo(w * 0.50, h * 0.292);
-          ctx.lineTo(w * 0.480, h * 0.264);
-          ctx.closePath();
-          ctx.fill();
-          ctx.strokeStyle = '#ff8bcb';
-          ctx.lineWidth = Math.max(2, w * 0.0028);
-          ctx.stroke();
+            // 3. 100% Bare Sun-Kissed Beach Legs (NO stockings!) + cute Aqua/Pink Ankle Bracelet!
+            for (let li = 0; li < 2; li++) {
+              const x0 = li === 0 ? 0 : w * 0.76;
+              const tw = w * 0.24;
+              const lg = ctx.createLinearGradient(x0, 0, x0 + tw, 0);
+              lg.addColorStop(0, skinEdge);
+              lg.addColorStop(0.26, skinBase);
+              lg.addColorStop(0.74, skinBase);
+              lg.addColorStop(1, skinEdge);
+              ctx.fillStyle = lg;
+              ctx.fillRect(x0, h * 0.485, tw, h * 0.515);
+              // Cute aqua + pearl ankle bracelet on left ankle
+              if (li === 0) {
+                ctx.fillStyle = '#5ae4ff';
+                ctx.fillRect(x0, h * 0.925, tw, h * 0.007);
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(x0 + tw * 0.5, h * 0.929, w * 0.006, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          } else {
+            // === CYBER Y2K BLACK & PINK CROP TOP + MICRO-SHORTS + GARTER STOCKINGS ===
+            const topGrad = ctx.createLinearGradient(0, h * 0.195, 0, h * 0.305);
+            topGrad.addColorStop(0, '#22182e');
+            topGrad.addColorStop(0.45, '#100c16');
+            topGrad.addColorStop(1, '#1c1428');
+            ctx.fillStyle = topGrad;
+            ctx.beginPath();
+            ctx.moveTo(w * 0.24, h * 0.240);
+            ctx.quadraticCurveTo(w * 0.34, h * 0.246, w * 0.40, h * 0.212);
+            ctx.quadraticCurveTo(w * 0.45, h * 0.188, w * 0.50, h * 0.236);
+            ctx.quadraticCurveTo(w * 0.55, h * 0.188, w * 0.60, h * 0.212);
+            ctx.quadraticCurveTo(w * 0.66, h * 0.246, w * 0.76, h * 0.240);
+            ctx.lineTo(w * 0.76, h * 0.304);
+            ctx.lineTo(w * 0.24, h * 0.304);
+            ctx.closePath();
+            ctx.fill();
 
-          // Glossy pink/chrome trim along plunge sweetheart neckline & cropped underbust hem
-          ctx.strokeStyle = '#ff8bcb';
-          ctx.lineWidth = Math.max(2, w * 0.0032);
-          ctx.beginPath();
-          ctx.moveTo(w * 0.24, h * 0.241);
-          ctx.quadraticCurveTo(w * 0.34, h * 0.247, w * 0.40, h * 0.213);
-          ctx.quadraticCurveTo(w * 0.45, h * 0.189, w * 0.50, h * 0.237);
-          ctx.quadraticCurveTo(w * 0.55, h * 0.189, w * 0.60, h * 0.213);
-          ctx.quadraticCurveTo(w * 0.66, h * 0.247, w * 0.76, h * 0.241);
-          ctx.stroke();
+            ctx.fillStyle = skinBase;
+            ctx.beginPath();
+            ctx.moveTo(w * 0.50, h * 0.234);
+            ctx.lineTo(w * 0.520, h * 0.264);
+            ctx.lineTo(w * 0.50, h * 0.292);
+            ctx.lineTo(w * 0.480, h * 0.264);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#ff8bcb';
+            ctx.lineWidth = Math.max(2, w * 0.0028);
+            ctx.stroke();
 
-          ctx.fillStyle = '#ff8bcb';
-          ctx.fillRect(w * 0.24, h * 0.300, w * 0.52, h * 0.004);
-
-          // Sleek Cyber Y2K Choker with chrome O-ring + thin halter straps
-          ctx.fillStyle = '#100c16';
-          ctx.fillRect(w * 0.41, h * 0.056, w * 0.18, h * 0.018);
-          ctx.strokeStyle = '#d9d9e8';
-          ctx.lineWidth = Math.max(2, w * 0.003);
-          ctx.beginPath();
-          ctx.arc(w * 0.50, h * 0.072, w * 0.011, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.strokeStyle = '#14101c';
-          ctx.lineWidth = Math.max(3, w * 0.006);
-          ctx.beginPath();
-          ctx.moveTo(w * 0.46, h * 0.198);
-          ctx.lineTo(w * 0.478, h * 0.072);
-          ctx.moveTo(w * 0.54, h * 0.198);
-          ctx.lineTo(w * 0.522, h * 0.072);
-          ctx.stroke();
-
-          // 4. Fitted Low-Rise Black Cyber Y2K Micro-Shorts (hips y: 0.455..0.60)
-          const shortsGrad = ctx.createLinearGradient(0, h * 0.455, 0, h * 0.60);
-          shortsGrad.addColorStop(0, '#1a1426');
-          shortsGrad.addColorStop(0.5, '#0f0c16');
-          shortsGrad.addColorStop(1, '#161120');
-          ctx.fillStyle = shortsGrad;
-          ctx.fillRect(w * 0.24, h * 0.455, w * 0.52, h * 0.155);
-          // Sleek Y2K low-rise belt with chrome clasp & neon-pink accent
-          ctx.fillStyle = '#241b35';
-          ctx.fillRect(w * 0.24, h * 0.455, w * 0.52, h * 0.020);
-          ctx.fillStyle = '#ff8bcb';
-          ctx.fillRect(w * 0.24, h * 0.456, w * 0.52, h * 0.0035);
-          ctx.fillStyle = '#d9d9e8';
-          ctx.fillRect(w * 0.476, h * 0.458, w * 0.048, h * 0.014);
-          ctx.fillStyle = '#120e18';
-          ctx.fillRect(w * 0.485, h * 0.460, w * 0.030, h * 0.009);
-
-          // 5. Legs: High-Cut Micro-Shorts + Bare Thighs + Garter Straps + Sheer Glossy Thigh-High Stockings
-          for (const x0 of [0, w * 0.76]) {
-            const tw = w * 0.24;
-            // High-cut micro-shorts cuff (y: 0.485..0.522) — reveals more leg!
-            ctx.fillStyle = '#110d18';
-            ctx.fillRect(x0, h * 0.485, tw, h * 0.037);
+            ctx.strokeStyle = '#ff8bcb';
+            ctx.lineWidth = Math.max(2, w * 0.0032);
+            ctx.beginPath();
+            ctx.moveTo(w * 0.24, h * 0.241);
+            ctx.quadraticCurveTo(w * 0.34, h * 0.247, w * 0.40, h * 0.213);
+            ctx.quadraticCurveTo(w * 0.45, h * 0.189, w * 0.50, h * 0.237);
+            ctx.quadraticCurveTo(w * 0.55, h * 0.189, w * 0.60, h * 0.213);
+            ctx.quadraticCurveTo(w * 0.66, h * 0.247, w * 0.76, h * 0.241);
+            ctx.stroke();
             ctx.fillStyle = '#ff8bcb';
-            ctx.fillRect(x0, h * 0.519, tw, h * 0.003);
+            ctx.fillRect(w * 0.24, h * 0.300, w * 0.52, h * 0.004);
 
-            // Bare thighs (y: 0.522..0.678) with smooth anime cylindrical shading
-            const tg = ctx.createLinearGradient(x0, 0, x0 + tw, 0);
-            tg.addColorStop(0, skinEdge);
-            tg.addColorStop(0.26, skinBase);
-            tg.addColorStop(0.74, skinBase);
-            tg.addColorStop(1, skinEdge);
-            ctx.fillStyle = tg;
-            ctx.fillRect(x0, h * 0.522, tw, h * 0.156);
-
-            // Soft shadow right under shorts hem
-            const shHem = ctx.createLinearGradient(0, h * 0.522, 0, h * 0.540);
-            shHem.addColorStop(0, skinShadow);
-            shHem.addColorStop(1, 'rgba(248,231,227,0)');
-            ctx.fillStyle = shHem;
-            ctx.fillRect(x0, h * 0.522, tw, h * 0.018);
-
-            // Sleek garter strap + chrome clip connecting shorts to thigh-high stocking
-            const gx = x0 + tw * 0.50;
-            ctx.fillStyle = '#120e18';
-            ctx.fillRect(gx - tw * 0.045, h * 0.519, tw * 0.09, h * 0.158);
-            ctx.fillStyle = '#ff8bcb';
-            ctx.fillRect(gx - tw * 0.014, h * 0.519, tw * 0.028, h * 0.158);
-            ctx.fillStyle = '#d9d9e8';
-            ctx.fillRect(gx - tw * 0.055, h * 0.664, tw * 0.11, h * 0.012);
-
-            // Sheer glossy black thigh-high stockings (y: 0.678..1.00) with silky highlight sheen
-            const stg = ctx.createLinearGradient(x0, 0, x0 + tw, 0);
-            stg.addColorStop(0, '#0c0912');
-            stg.addColorStop(0.36, '#2a2036');
-            stg.addColorStop(0.50, '#3a2c44');
-            stg.addColorStop(0.64, '#2a2036');
-            stg.addColorStop(1, '#0c0912');
-            ctx.fillStyle = stg;
-            ctx.fillRect(x0, h * 0.678, tw, h * 0.322);
-
-            // Crisp stocking top garter band with double neon-pink trim
             ctx.fillStyle = '#100c16';
-            ctx.fillRect(x0, h * 0.674, tw, h * 0.018);
+            ctx.fillRect(w * 0.41, h * 0.056, w * 0.18, h * 0.018);
+            ctx.strokeStyle = '#d9d9e8';
+            ctx.lineWidth = Math.max(2, w * 0.003);
+            ctx.beginPath();
+            ctx.arc(w * 0.50, h * 0.072, w * 0.011, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.strokeStyle = '#14101c';
+            ctx.lineWidth = Math.max(3, w * 0.006);
+            ctx.beginPath();
+            ctx.moveTo(w * 0.46, h * 0.198);
+            ctx.lineTo(w * 0.478, h * 0.072);
+            ctx.moveTo(w * 0.54, h * 0.198);
+            ctx.lineTo(w * 0.522, h * 0.072);
+            ctx.stroke();
+
+            const shortsGrad = ctx.createLinearGradient(0, h * 0.455, 0, h * 0.60);
+            shortsGrad.addColorStop(0, '#1a1426');
+            shortsGrad.addColorStop(0.5, '#0f0c16');
+            shortsGrad.addColorStop(1, '#161120');
+            ctx.fillStyle = shortsGrad;
+            ctx.fillRect(w * 0.24, h * 0.455, w * 0.52, h * 0.155);
+            ctx.fillStyle = '#241b35';
+            ctx.fillRect(w * 0.24, h * 0.455, w * 0.52, h * 0.020);
             ctx.fillStyle = '#ff8bcb';
-            ctx.fillRect(x0, h * 0.676, tw, h * 0.003);
-            ctx.fillRect(x0, h * 0.688, tw, h * 0.0025);
+            ctx.fillRect(w * 0.24, h * 0.456, w * 0.52, h * 0.0035);
+            ctx.fillStyle = '#d9d9e8';
+            ctx.fillRect(w * 0.476, h * 0.458, w * 0.048, h * 0.014);
+            ctx.fillStyle = '#120e18';
+            ctx.fillRect(w * 0.485, h * 0.460, w * 0.030, h * 0.009);
+
+            for (const x0 of [0, w * 0.76]) {
+              const tw = w * 0.24;
+              ctx.fillStyle = '#110d18';
+              ctx.fillRect(x0, h * 0.485, tw, h * 0.037);
+              ctx.fillStyle = '#ff8bcb';
+              ctx.fillRect(x0, h * 0.519, tw, h * 0.003);
+
+              const tg = ctx.createLinearGradient(x0, 0, x0 + tw, 0);
+              tg.addColorStop(0, skinEdge);
+              tg.addColorStop(0.26, skinBase);
+              tg.addColorStop(0.74, skinBase);
+              tg.addColorStop(1, skinEdge);
+              ctx.fillStyle = tg;
+              ctx.fillRect(x0, h * 0.522, tw, h * 0.156);
+
+              const shHem = ctx.createLinearGradient(0, h * 0.522, 0, h * 0.540);
+              shHem.addColorStop(0, skinShadow);
+              shHem.addColorStop(1, 'rgba(248,231,227,0)');
+              ctx.fillStyle = shHem;
+              ctx.fillRect(x0, h * 0.522, tw, h * 0.018);
+
+              const gx = x0 + tw * 0.50;
+              ctx.fillStyle = '#120e18';
+              ctx.fillRect(gx - tw * 0.045, h * 0.519, tw * 0.09, h * 0.158);
+              ctx.fillStyle = '#ff8bcb';
+              ctx.fillRect(gx - tw * 0.014, h * 0.519, tw * 0.028, h * 0.158);
+              ctx.fillStyle = '#d9d9e8';
+              ctx.fillRect(gx - tw * 0.055, h * 0.664, tw * 0.11, h * 0.012);
+
+              const stg = ctx.createLinearGradient(x0, 0, x0 + tw, 0);
+              stg.addColorStop(0, '#0c0912');
+              stg.addColorStop(0.36, '#2a2036');
+              stg.addColorStop(0.50, '#3a2c44');
+              stg.addColorStop(0.64, '#2a2036');
+              stg.addColorStop(1, '#0c0912');
+              ctx.fillStyle = stg;
+              ctx.fillRect(x0, h * 0.678, tw, h * 0.322);
+
+              ctx.fillStyle = '#100c16';
+              ctx.fillRect(x0, h * 0.674, tw, h * 0.018);
+              ctx.fillStyle = '#ff8bcb';
+              ctx.fillRect(x0, h * 0.676, tw, h * 0.003);
+              ctx.fillRect(x0, h * 0.688, tw, h * 0.0025);
+            }
           }
 
-          mat.userData._openMap = makeTex(c, orig);
+          mat.userData[cacheKey] = makeTex(c, orig);
         }
 
-        mat.map = mat.userData._openMap;
+        mat.map = mat.userData[cacheKey];
         if ('shadeMultiplyTexture' in mat && mat.userData._origShade) {
-          mat.shadeMultiplyTexture = mat.userData._openMap;
+          mat.shadeMultiplyTexture = mat.userData[cacheKey];
         }
         if ('normalMap' in mat) mat.normalMap = null;
         mat.needsUpdate = true;
@@ -1349,7 +1433,7 @@ export class CharacterStage {
 
         this.vrm = vrm;
         this.isVrm0 = vrm.meta?.metaVersion === '0';
-        this._applyOutfitStyle(vrm, this.openOutfit);
+        this._applyOutfitStyle(vrm, this.outfitMode);
         if (this.viewMode !== 'normal') this.setViewMode(this.viewMode);
         this._setupRig();
         this.opts.onLoaded?.();
@@ -1448,7 +1532,7 @@ export class CharacterStage {
   _setExpr(exp, name, val) {
     try {
       exp.setValue(name, val);
-    } catch {}
+    } catch { }
   }
 
   _animate(dt) {
