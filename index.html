@@ -1,535 +1,531 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/favicon.png" />
-    <meta property="og:title" content="$YUZU® // DIGITAL UNIVERSE 2026" />
-    <meta property="og:description" content="The first living 3D AI companion on Solana. Pet, talk, trade & farm up to 5x OG Airdrop." />
-    <meta property="og:image" content="https://yuzuha-simulator.vercel.app/yuzu-logo.jpg" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://yuzuha-simulator.vercel.app/yuzu-logo.jpg" />
-    <title>$YUZU® // DIGITAL UNIVERSE 2026</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <!-- Subtle Film-Grain Noise Texture -->
-    <div class="noise-layer" aria-hidden="true"></div>
 
-    <!-- FIXED CENTERED 3D STAGE (3D Girl + Real 3D Liquid-Chrome Cyber-Tribal & Glossy Glass Scene) -->
-    <div id="stage-fixed" class="stage-fixed">
-      <div class="stage-loader" id="stage-loader">
-        <img src="/yuzu-logo.png" class="loader-logo" alt="$YUZU" />
-        <div class="loader-ring"></div>
-        <span id="stage-loader-text">SYSTEM BOOT // 0%</span>
-      </div>
-      <div class="speech" id="speech"></div>
+<!-- FIXED CENTERED 3D STAGE (3D Girl + Real 3D Liquid-Chrome Cyber-Tribal & Glossy Glass Scene) -->
+<div id="stage-fixed" class="stage-fixed">
+  <div class="stage-loader" id="stage-loader">
+    <img src="/yuzu-logo.png" class="loader-logo" alt="$YUZU" />
+    <div class="loader-ring"></div>
+    <span id="stage-loader-text">SYSTEM BOOT // 0%</span>
+  </div>
+  <div class="speech" id="speech"></div>
+</div>
+<div class="speech" id="speech"></div>
+</div>
+
+<!-- EDITORIAL TOP BAR -->
+<header class="hud-top">
+  <a href="#band-1" class="brand">
+    <img src="/yuzu-logo.png" class="brand-logo" alt="$YUZU" />
+    <span class="brand-title">$<span data-ticker>YUZU</span>®</span>
+    <span class="sys-badge"><span class="acid-dot"></span>SYSTEM ONLINE</span>
+  </a>
+
+  <nav class="top-nav">
+    <a href="#band-1" class="nav-link active" data-band="0">001 / ENTITY</a>
+    <a href="#band-2" class="nav-link" data-band="1">002 / CONTROL</a>
+    <a href="#band-3" class="nav-link" data-band="2">003 / TOKEN</a>
+    <a href="#band-4" class="nav-link" data-band="3">004 / SIGNAL</a>
+    <button class="nav-link nav-docs-btn" id="btn-tour">GUIDE TOUR</button>
+    <button class="nav-link nav-docs-btn" id="btn-open-mod">MOD STUDIO</button>
+    <button class="nav-link nav-docs-btn" id="btn-open-forge">LOGO FORGE</button>
+    <button class="nav-link nav-docs-btn" id="btn-open-ext">CHROME EXT</button>
+    <button class="nav-link nav-docs-btn" id="btn-open-docs">DOCS ↗</button>
+  </nav>
+
+  <div class="top-right">
+    <div class="top-load">
+      <span class="micro">SYNC <b id="charm-load-pct">72%</b></span>
+      <div class="load-segments" id="load-segments"></div>
     </div>
+    <button class="gloss-btn btn-wallet" id="btn-wallet">
+      <span class="wallet-dot"></span><span id="wallet-label">CONNECT</span>
+    </button>
+  </div>
+</header>
 
-    <!-- EDITORIAL TOP BAR -->
-    <header class="hud-top">
-      <a href="#band-1" class="brand">
-        <img src="/yuzu-logo.png" class="brand-logo" alt="$YUZU" />
-        <span class="brand-title">$<span data-ticker>YUZU</span>®</span>
-        <span class="sys-badge"><span class="acid-dot"></span>SYSTEM ONLINE</span>
-      </a>
-
-      <nav class="top-nav">
-        <a href="#band-1" class="nav-link active" data-band="0">001 / ENTITY</a>
-        <a href="#band-2" class="nav-link" data-band="1">002 / CONTROL</a>
-        <a href="#band-3" class="nav-link" data-band="2">003 / TOKEN</a>
-        <a href="#band-4" class="nav-link" data-band="3">004 / SIGNAL</a>
-        <button class="nav-link nav-docs-btn" id="btn-tour">GUIDE TOUR</button>
-        <button class="nav-link nav-docs-btn" id="btn-open-mod">MOD STUDIO</button>
-        <button class="nav-link nav-docs-btn" id="btn-open-forge">LOGO FORGE</button>
-        <button class="nav-link nav-docs-btn" id="btn-open-ext">CHROME EXT</button>
-        <button class="nav-link nav-docs-btn" id="btn-open-docs">DOCS ↗</button>
-      </nav>
-
-      <div class="top-right">
-        <div class="top-load">
-          <span class="micro">SYNC <b id="charm-load-pct">72%</b></span>
-          <div class="load-segments" id="load-segments"></div>
+<!-- ASYMMETRIC EDITORIAL SCROLL BANDS -->
+<main class="scroll-bands">
+  <!-- 001 — DIGITAL ENTITY (HERO + ECG + POSES) -->
+  <section class="band" id="band-1">
+    <div class="col col-left">
+      <div class="editorial-block">
+        <div class="meta-line">
+          <span>001 — DIGITAL OBJECT</span>
+          <span class="acid-text">EST. 2026</span>
         </div>
-        <button class="gloss-btn btn-wallet" id="btn-wallet">
-          <span class="wallet-dot"></span><span id="wallet-label">CONNECT</span>
-        </button>
+        <div class="hero-logo-wrap">
+          <img src="/yuzu-logo.png" class="hero-logo" alt="$YUZU — SOLANA 2026" />
+          <h1 class="sr-only">$<span data-ticker>YUZU</span></h1>
+        </div>
+        <p class="hero-lead">THE FIRST LIVING 3D AI WAIFU ON SOLANA. PET, TALK, TRADE &amp; FARM UP TO <b
+            class="acid-text">5× OG AIRDROP</b>.</p>
+
+        <div class="og-hook-strip">
+          <div class="og-hook-top">
+            <span class="micro">OG AIRDROP BOOST</span>
+            <b class="acid-text" id="og-mult">1.0× · LVL 1</b>
+          </div>
+          <div class="og-hook-sub">Level up BOND (pet head / chat) to boost your airdrop multiplier up to 5.0× +
+            Genesis NFT.</div>
+          <button class="gloss-key gloss-pink" id="btn-claim-og" style="width:100%;margin-top:6px">LOCK OG AIRDROP
+            MULTIPLIER</button>
+        </div>
+
+        <div class="ca-strip">
+          <span class="ca-tag">CA</span>
+          <span class="ca-value" id="ca-value">LAUNCHING SOON</span>
+          <button class="ca-copy" id="ca-copy">COPY</button>
+        </div>
+
+        <div class="btn-row">
+          <a class="gloss-btn gloss-pink" data-buy="jupiter" href="#" target="_blank" rel="noopener">BUY ON JUPITER
+            ↗</a>
+          <a class="gloss-btn" data-buy="dexscreener" href="#" target="_blank" rel="noopener">CHART</a>
+        </div>
       </div>
-    </header>
 
-    <!-- ASYMMETRIC EDITORIAL SCROLL BANDS -->
-    <main class="scroll-bands">
-      <!-- 001 — DIGITAL ENTITY (HERO + ECG + POSES) -->
-      <section class="band" id="band-1">
-        <div class="col col-left">
-          <div class="editorial-block">
-            <div class="meta-line">
-              <span>001 — DIGITAL OBJECT</span>
-              <span class="acid-text">EST. 2026</span>
-            </div>
-            <div class="hero-logo-wrap">
-              <img src="/yuzu-logo.png" class="hero-logo" alt="$YUZU — SOLANA 2026" />
-              <h1 class="sr-only">$<span data-ticker>YUZU</span></h1>
-            </div>
-            <p class="hero-lead">THE FIRST LIVING 3D AI WAIFU ON SOLANA. PET, TALK, TRADE &amp; FARM UP TO <b class="acid-text">5× OG AIRDROP</b>.</p>
-
-            <div class="og-hook-strip">
-              <div class="og-hook-top">
-                <span class="micro">OG AIRDROP BOOST</span>
-                <b class="acid-text" id="og-mult">1.0× · LVL 1</b>
-              </div>
-              <div class="og-hook-sub">Level up BOND (pet head / chat) to boost your airdrop multiplier up to 5.0× + Genesis NFT.</div>
-              <button class="gloss-key gloss-pink" id="btn-claim-og" style="width:100%;margin-top:6px">LOCK OG AIRDROP MULTIPLIER</button>
-            </div>
-
-            <div class="ca-strip">
-              <span class="ca-tag">CA</span>
-              <span class="ca-value" id="ca-value">LAUNCHING SOON</span>
-              <button class="ca-copy" id="ca-copy">COPY</button>
-            </div>
-
-            <div class="btn-row">
-              <a class="gloss-btn gloss-pink" data-buy="jupiter" href="#" target="_blank" rel="noopener">BUY ON JUPITER ↗</a>
-              <a class="gloss-btn" data-buy="dexscreener" href="#" target="_blank" rel="noopener">CHART</a>
-            </div>
-          </div>
-
-          <div class="terminal-block">
-            <div class="meta-line">
-              <span><span class="heart-beat-icon" id="heart-beat-icon">●</span> ECG // HEARTBEAT</span>
-              <span style="display:flex;align-items:center;gap:6px">
-                <span class="acid-text"><span id="bpm-val">96</span> BPM</span>
-                <button class="gloss-key" id="btn-pulse-audio" style="padding:2px 6px;font-size:8px">PULSE OFF</button>
-              </span>
-            </div>
-            <div class="wave-box">
-              <svg viewBox="0 0 220 46" preserveAspectRatio="none">
-                <line x1="0" y1="23" x2="220" y2="23" stroke="rgba(217,217,232,0.1)" stroke-dasharray="2 4" />
-                <path id="wave-ghost" fill="none" stroke="rgba(114,231,255,0.3)" stroke-width="1.2" />
-                <path id="wave-path" fill="none" stroke="#FF8BCB" stroke-width="1.8" />
-                <circle id="wave-dot" cx="214" cy="23" r="2.8" fill="#B8FF65" />
-              </svg>
-            </div>
-            <div class="meta-line">
-              <span>PULSE <strong id="pulse-hz">1.6 HZ</strong> · <strong id="pat-count">0</strong> PATS</span>
-              <span class="acid-text" id="bond-rank">LVL 1 · STRANGER</span>
-            </div>
-            <div class="bond-bar-track" title="Hold & rub her head to level up Bond!">
-              <div id="bond-bar-fill" class="bond-bar-fill" style="width:15%"></div>
-            </div>
-          </div>
+      <div class="terminal-block">
+        <div class="meta-line">
+          <span><span class="heart-beat-icon" id="heart-beat-icon">●</span> ECG // HEARTBEAT</span>
+          <span style="display:flex;align-items:center;gap:6px">
+            <span class="acid-text"><span id="bpm-val">96</span> BPM</span>
+            <button class="gloss-key" id="btn-pulse-audio" style="padding:2px 6px;font-size:8px">PULSE OFF</button>
+          </span>
         </div>
-
-        <div class="col-center-spacer"></div>
-
-        <div class="col col-right">
-          <div class="editorial-block">
-            <div class="meta-line">
-              <span>01 / DEGEN RADAR</span>
-              <button class="gloss-key" id="btn-market-brief" style="padding:3px 7px;font-size:8px">BRIEF</button>
-            </div>
-            <div class="energy-bars" id="energy-bars"></div>
-            <div class="crypto-radar" id="crypto-radar">
-              <div class="radar-row"><span>SOL</span><b>…</b><em class="flat">—</em></div>
-              <div class="radar-row"><span>BTC</span><b>…</b><em class="flat">—</em></div>
-              <div class="radar-row"><span>ETH</span><b>…</b><em class="flat">—</em></div>
-              <div class="radar-row"><span>WIF</span><b>…</b><em class="flat">—</em></div>
-              <div class="radar-row"><span>BONK</span><b>…</b><em class="flat">—</em></div>
-              <div class="radar-row"><span>JUP</span><b>…</b><em class="flat">—</em></div>
-            </div>
-            <div class="kv-grid" style="margin-top:8px">
-              <div><span class="micro">PRICE</span><b id="st-price">—</b></div>
-              <div><span class="micro">MCAP</span><b id="st-mcap">—</b></div>
-              <div><span class="micro">LIQ</span><b id="st-liq">—</b></div>
-              <div><span class="micro">24H</span><b id="st-change">—</b></div>
-            </div>
-          </div>
-
-          <div class="editorial-block">
-            <div class="meta-line">
-              <span>02 / EXPERIMENT</span>
-              <span>POSES &amp; CAM</span>
-            </div>
-            <div class="key-grid">
-              <button class="gloss-key gloss-pink" data-react="headpat">PET</button>
-              <button class="gloss-key" data-react="kiss">KISS</button>
-              <button class="gloss-key" data-react="peace">POSE</button>
-              <button class="gloss-key" data-react="dance">DANCE</button>
-              <button class="gloss-key" data-react="spin">SPIN</button>
-              <button class="gloss-key" data-react="wave">WAVE</button>
-              <button class="gloss-key" data-react="shy">SHY</button>
-              <button class="gloss-key" data-react="pout">POUT</button>
-            </div>
-            <div class="key-grid" id="cam-chips" style="margin-top:8px">
-              <button class="gloss-key active" data-cam="hero">HERO</button>
-              <button class="gloss-key" data-cam="face">FACE</button>
-              <button class="gloss-key" data-cam="outfit">BODY</button>
-              <button class="gloss-key" data-cam="full">FULL</button>
-              <button class="gloss-key" id="btn-turntable">360</button>
-            </div>
-            <div class="meta-line" style="margin:10px 0 6px">
-              <span>OUTFIT STYLE</span>
-              <span class="acid-text">3 MODES</span>
-            </div>
-            <div class="key-grid" id="outfit-chips">
-              <button class="gloss-key active" data-outfit="full">FULL</button>
-              <button class="gloss-key" data-outfit="open">CYBER</button>
-              <button class="gloss-key" data-outfit="beach">BEACH</button>
-            </div>
-            <div class="meta-line" style="margin:10px 0 6px">
-              <span>3D RIG BREAKDOWN</span>
-              <span class="acid-text">X-RAY / MESH</span>
-            </div>
-            <div class="key-grid" id="view-chips">
-              <button class="gloss-key active" data-view="normal">NORMAL</button>
-              <button class="gloss-key" data-view="skeleton">SKELETON</button>
-              <button class="gloss-key" data-view="wireframe">WIREFRAME</button>
-            </div>
-          </div>
+        <div class="wave-box">
+          <svg viewBox="0 0 220 46" preserveAspectRatio="none">
+            <line x1="0" y1="23" x2="220" y2="23" stroke="rgba(217,217,232,0.1)" stroke-dasharray="2 4" />
+            <path id="wave-ghost" fill="none" stroke="rgba(114,231,255,0.3)" stroke-width="1.2" />
+            <path id="wave-path" fill="none" stroke="#FF8BCB" stroke-width="1.8" />
+            <circle id="wave-dot" cx="214" cy="23" r="2.8" fill="#B8FF65" />
+          </svg>
         </div>
-      </section>
-
-      <!-- 002 — MOTION CONTROL & SPECS -->
-      <section class="band" id="band-2">
-        <div class="col col-left">
-          <div class="editorial-block">
-            <div class="meta-line">
-              <span>002 — MOTION ENGINE</span>
-              <span>REALTIME IK</span>
-            </div>
-            <div id="motion-sliders" class="slider-list"></div>
-          </div>
-
-          <div class="terminal-block">
-            <div class="meta-line">
-              <span>ORIENTATION</span>
-              <span class="acid-text"><span id="cam-fps">60</span> FPS</span>
-            </div>
-            <div class="orient-grid">
-              <div class="horizon-dial">
-                <div class="horizon-ring"></div>
-                <div id="horizon-line" class="horizon-line"><span class="horizon-notch"></span></div>
-              </div>
-              <div class="orient-stats">
-                <div><span class="micro">DIST</span><b id="cam-dist">3.15 M</b></div>
-                <div><span class="micro">YAW</span><b id="cam-yaw">+0.0°</b></div>
-                <div><span class="micro">PITCH</span><b id="cam-pitch">-4.0°</b></div>
-              </div>
-            </div>
-          </div>
+        <div class="meta-line">
+          <span>PULSE <strong id="pulse-hz">1.6 HZ</strong> · <strong id="pat-count">0</strong> PATS</span>
+          <span class="acid-text" id="bond-rank">LVL 1 · STRANGER</span>
         </div>
-
-        <div class="col-center-spacer"></div>
-
-        <div class="col col-right">
-          <div class="editorial-block">
-            <div class="meta-line">
-              <span>ARCHITECTURE</span>
-              <span>SOLANA SPL</span>
-            </div>
-            <h2 class="section-display">DIGITAL<br/>CULTURE.</h2>
-            <div class="spec-rows">
-              <div><span>LIQUIDITY</span><b class="acid-text">BURNED</b></div>
-              <div><span>MINT / FREEZE</span><b>REVOKED</b></div>
-              <div><span>BUY / SELL TAX</span><b data-tax>0% / 0%</b></div>
-              <div><span>3D ENGINE</span><b>VRM + SPRINGBONE</b></div>
-            </div>
-          </div>
+        <div class="bond-bar-track" title="Hold & rub her head to level up Bond!">
+          <div id="bond-bar-fill" class="bond-bar-fill" style="width:15%"></div>
         </div>
-      </section>
-
-      <!-- 003 — TOKENOMICS & WALLET -->
-      <section class="band" id="band-3">
-        <div class="col col-left">
-          <div class="editorial-block">
-            <div class="meta-line">
-              <span>003 — DISTRIBUTION</span>
-              <span id="supply-short">1B</span>
-            </div>
-            <div class="donut-wrap">
-              <div class="donut" id="donut"></div>
-              <div class="donut-center">
-                <span class="donut-num">1B</span>
-                <span class="micro">FIXED</span>
-              </div>
-            </div>
-            <div id="tk-rows" class="tk-rows"></div>
-          </div>
-        </div>
-
-        <div class="col-center-spacer"></div>
-
-        <div class="col col-right">
-          <div class="editorial-block">
-            <div class="meta-line">
-              <span>WALLET TERMINAL</span>
-              <span>PHANTOM / SOLFLARE</span>
-            </div>
-            <div class="spec-rows" style="margin-bottom:14px">
-              <div><span>ADDRESS</span><b id="bw-addr">NOT CONNECTED</b></div>
-              <div><span>SOL</span><b id="bw-sol">—</b></div>
-              <div><span>$<span data-ticker>YUZU</span></span><b id="bw-token">—</b></div>
-            </div>
-            <div class="key-grid">
-              <a class="gloss-key gloss-pink" data-buy="jupiter" href="#" target="_blank" rel="noopener">JUPITER ↗</a>
-              <a class="gloss-key" data-buy="raydium" href="#" target="_blank" rel="noopener">RAYDIUM ↗</a>
-              <a class="gloss-key" data-buy="pumpfun" href="#" target="_blank" rel="noopener">PUMP.FUN ↗</a>
-              <a class="gloss-key" data-buy="birdeye" href="#" target="_blank" rel="noopener">BIRDEYE ↗</a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 004 — ROADMAP & LIVE SIGNAL -->
-      <section class="band" id="band-4">
-        <div class="col col-left">
-          <div class="editorial-block">
-            <div class="meta-line">
-              <span>004 — SEQUENCE</span>
-              <span>2026</span>
-            </div>
-            <div class="road-item"><b>01 / AWAKENING</b><p>Fair launch · LP burn · Interactive 3D webcore terminal</p></div>
-            <div class="road-item"><b>02 / EXPANSION</b><p>1K holders · CoinGecko · Custom VRM avatar drops</p></div>
-            <div class="road-item"><b>03 / UNIVERSE</b><p>10K holders · CEX · Full AI voice companion</p></div>
-            <div class="key-grid" style="margin-top:14px">
-              <a class="gloss-key gloss-pink" id="link-twitter" href="#" target="_blank" rel="noopener">X / TWITTER</a>
-              <a class="gloss-key" data-buy="dexscreener" href="#" target="_blank" rel="noopener">DEXSCREENER</a>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-center-spacer"></div>
-
-        <div class="col col-right">
-          <div class="editorial-block">
-            <div class="meta-line">
-              <span>LIVE SIGNAL</span>
-              <span>DEXSCREENER</span>
-            </div>
-            <div class="chart-box" id="chart-box">
-              <div class="chart-empty" id="chart-empty">
-                <p>AWAITING CA IN <code>src/config.js</code></p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <!-- LIVE 3D RIG / SKELETON BREAKDOWN HUD (shown in SKELETON / WIREFRAME mode) -->
-    <aside class="terminal-block rig-hud" id="rig-hud" aria-hidden="true">
-      <div class="meta-line" style="margin-bottom:6px">
-        <span class="acid-text">◈ RIG BREAKDOWN // X-RAY</span>
-        <button class="gloss-key" id="btn-rig-close" style="padding:2px 6px;font-size:8px">✕</button>
-      </div>
-      <div class="rig-stats-grid">
-        <div><span class="micro">BONES</span><b id="rig-bones">—</b></div>
-        <div><span class="micro">TRIS</span><b id="rig-tris">—</b></div>
-        <div><span class="micro">SPRING</span><b id="rig-springs">—</b></div>
-        <div><span class="micro">IK</span><b>2-BONE</b></div>
-      </div>
-      <div class="quick-prompts" id="rig-parts" style="margin-top:8px">
-        <button type="button" class="qp-btn" data-rig="legs">Leg IK</button>
-        <button type="button" class="qp-btn" data-rig="hair">SpringBone</button>
-        <button type="button" class="qp-btn" data-rig="face">LookAt &amp; Face</button>
-        <button type="button" class="qp-btn" data-rig="spine">Spine &amp; Breath</button>
-      </div>
-    </aside>
-
-    <!-- COMPACT CHAT LAUNCHER PILL (prevents overlapping right-column buttons) -->
-    <button class="gloss-btn gloss-pink chat-fab" id="btn-chat-toggle">&gt; CHAT AI</button>
-
-    <!-- FIXED COLLAPSIBLE RETRO-TERMINAL VOICE AI DOCK (bottom-right) -->
-    <aside class="terminal-block chat-dock collapsed" id="chat-dock" aria-hidden="true">
-      <div class="meta-line" style="margin-bottom:6px">
-        <span class="acid-text">&gt; YUZU_GUIDE.EXE</span>
-        <span style="display:flex;gap:5px">
-          <button class="gloss-key active" id="btn-voice" style="padding:3px 7px;font-size:8px">VOICE ON</button>
-          <button class="gloss-key" id="btn-chat-min" style="padding:3px 7px;font-size:8px" title="Hide chat">–</button>
-        </span>
-      </div>
-      <div class="chat-log" id="chat-log">
-        <div class="chat-msg bot">&gt; Hey! I'm Yuzu — your $YUZU companion. Click Market, Tour, Skeleton, or talk to me about anything.</div>
-      </div>
-      <div class="quick-prompts" id="quick-prompts">
-        <button type="button" class="qp-btn" data-q="What pumped and dumped in crypto today?">Market</button>
-        <button type="button" class="qp-btn" data-q="Give me a guided tour of the site">Tour</button>
-        <button type="button" class="qp-btn" data-q="Show me your 3D skeleton rig breakdown">Skeleton</button>
-        <button type="button" class="qp-btn" data-q="How do I install your Chrome extension?">Extension</button>
-      </div>
-      <form class="chat-form" id="chat-form">
-        <input id="chat-input" type="text" placeholder="enter command or message…" autocomplete="off" />
-        <button type="submit" class="chat-send">↵</button>
-      </form>
-    </aside>
-
-    <!-- EDITORIAL BOTTOM BAR -->
-    <footer class="hud-bottom">
-      <span class="bottom-hints">[P] PET · [C] CHAT · [M] MOD · [S] SKELETON · [T] TOUR · [L] LOGO</span>
-      <span>$<span data-ticker>YUZU</span>® ALL RIGHTS RESERVED</span>
-    </footer>
-
-    <!-- CYBER Y2K DOCS / WHITEPAPER MODAL -->
-    <div class="docs-overlay" id="docs-overlay" aria-hidden="true">
-      <div class="docs-modal">
-        <div class="docs-head">
-          <div>
-            <span class="acid-text">DOCUMENTATION // V1.0</span>
-            <h2>$<span data-ticker>YUZU</span> PROTOCOL DOCS</h2>
-          </div>
-          <button class="gloss-key" id="btn-close-docs">ESC [✕]</button>
-        </div>
-        <div class="docs-tabs" id="docs-tabs">
-          <button class="gloss-key active" data-doc="lore">00 LORE</button>
-          <button class="gloss-key" data-doc="extension">CHROME EXT</button>
-          <button class="gloss-key" data-doc="overview">01 OVERVIEW</button>
-          <button class="gloss-key" data-doc="tokenomics">02 TOKENOMICS</button>
-          <button class="gloss-key" data-doc="security">03 SECURITY</button>
-          <button class="gloss-key" data-doc="tech">04 AI &amp; RIG</button>
-          <button class="gloss-key" data-doc="faq">05 FAQ</button>
-        </div>
-        <div class="docs-body" id="docs-body"></div>
       </div>
     </div>
 
-    <!-- CYBER Y2K LIQUID CHROME & GLASS LOGO FORGE MODAL -->
-    <div class="docs-overlay" id="forge-overlay" aria-hidden="true">
-      <div class="docs-modal forge-modal">
-        <div class="docs-head">
-          <div>
-            <span class="acid-text">CYBER Y2K STUDIO // 1024×1024 PNG + 3D MEDALLION</span>
-            <h2>CHROME &amp; GLASS LOGO FORGE</h2>
-          </div>
-          <button class="gloss-key" id="btn-close-forge">ESC [X]</button>
+    <div class="col-center-spacer"></div>
+
+    <div class="col col-right">
+      <div class="editorial-block">
+        <div class="meta-line">
+          <span>01 / DEGEN RADAR</span>
+          <button class="gloss-key" id="btn-market-brief" style="padding:3px 7px;font-size:8px">BRIEF</button>
         </div>
-        <div class="forge-grid">
-          <div class="forge-preview-wrap">
-            <canvas id="forge-canvas" width="512" height="512"></canvas>
+        <div class="energy-bars" id="energy-bars"></div>
+        <div class="crypto-radar" id="crypto-radar">
+          <div class="radar-row"><span>SOL</span><b>…</b><em class="flat">—</em></div>
+          <div class="radar-row"><span>BTC</span><b>…</b><em class="flat">—</em></div>
+          <div class="radar-row"><span>ETH</span><b>…</b><em class="flat">—</em></div>
+          <div class="radar-row"><span>WIF</span><b>…</b><em class="flat">—</em></div>
+          <div class="radar-row"><span>BONK</span><b>…</b><em class="flat">—</em></div>
+          <div class="radar-row"><span>JUP</span><b>…</b><em class="flat">—</em></div>
+        </div>
+        <div class="kv-grid" style="margin-top:8px">
+          <div><span class="micro">PRICE</span><b id="st-price">—</b></div>
+          <div><span class="micro">MCAP</span><b id="st-mcap">—</b></div>
+          <div><span class="micro">LIQ</span><b id="st-liq">—</b></div>
+          <div><span class="micro">24H</span><b id="st-change">—</b></div>
+        </div>
+      </div>
+
+      <div class="editorial-block">
+        <div class="meta-line">
+          <span>02 / EXPERIMENT</span>
+          <span>POSES &amp; CAM</span>
+        </div>
+        <div class="key-grid">
+          <button class="gloss-key gloss-pink" data-react="headpat">PET</button>
+          <button class="gloss-key" data-react="kiss">KISS</button>
+          <button class="gloss-key" data-react="peace">POSE</button>
+          <button class="gloss-key" data-react="dance">DANCE</button>
+          <button class="gloss-key" data-react="spin">SPIN</button>
+          <button class="gloss-key" data-react="wave">WAVE</button>
+          <button class="gloss-key" data-react="shy">SHY</button>
+          <button class="gloss-key" data-react="pout">POUT</button>
+        </div>
+        <div class="key-grid" id="cam-chips" style="margin-top:8px">
+          <button class="gloss-key active" data-cam="hero">HERO</button>
+          <button class="gloss-key" data-cam="face">FACE</button>
+          <button class="gloss-key" data-cam="outfit">BODY</button>
+          <button class="gloss-key" data-cam="full">FULL</button>
+          <button class="gloss-key" id="btn-turntable">360</button>
+        </div>
+        <div class="meta-line" style="margin:10px 0 6px">
+          <span>OUTFIT STYLE</span>
+          <span class="acid-text">3 MODES</span>
+        </div>
+        <div class="key-grid" id="outfit-chips">
+          <button class="gloss-key active" data-outfit="full">FULL</button>
+          <button class="gloss-key" data-outfit="open">CYBER</button>
+          <button class="gloss-key" data-outfit="beach">BEACH</button>
+        </div>
+        <div class="meta-line" style="margin:10px 0 6px">
+          <span>3D RIG BREAKDOWN</span>
+          <span class="acid-text">X-RAY / MESH</span>
+        </div>
+        <div class="key-grid" id="view-chips">
+          <button class="gloss-key active" data-view="normal">NORMAL</button>
+          <button class="gloss-key" data-view="skeleton">SKELETON</button>
+          <button class="gloss-key" data-view="wireframe">WIREFRAME</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 002 — MOTION CONTROL & SPECS -->
+  <section class="band" id="band-2">
+    <div class="col col-left">
+      <div class="editorial-block">
+        <div class="meta-line">
+          <span>002 — MOTION ENGINE</span>
+          <span>REALTIME IK</span>
+        </div>
+        <div id="motion-sliders" class="slider-list"></div>
+      </div>
+
+      <div class="terminal-block">
+        <div class="meta-line">
+          <span>ORIENTATION</span>
+          <span class="acid-text"><span id="cam-fps">60</span> FPS</span>
+        </div>
+        <div class="orient-grid">
+          <div class="horizon-dial">
+            <div class="horizon-ring"></div>
+            <div id="horizon-line" class="horizon-line"><span class="horizon-notch"></span></div>
           </div>
-          <div class="forge-controls">
-            <label class="forge-label">
-              <span class="micro">TICKER / TEXT</span>
-              <input id="forge-text" type="text" value="$YUZU" maxlength="14" autocomplete="off" />
+          <div class="orient-stats">
+            <div><span class="micro">DIST</span><b id="cam-dist">3.15 M</b></div>
+            <div><span class="micro">YAW</span><b id="cam-yaw">+0.0°</b></div>
+            <div><span class="micro">PITCH</span><b id="cam-pitch">-4.0°</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-center-spacer"></div>
+
+    <div class="col col-right">
+      <div class="editorial-block">
+        <div class="meta-line">
+          <span>ARCHITECTURE</span>
+          <span>SOLANA SPL</span>
+        </div>
+        <h2 class="section-display">DIGITAL<br />CULTURE.</h2>
+        <div class="spec-rows">
+          <div><span>LIQUIDITY</span><b class="acid-text">BURNED</b></div>
+          <div><span>MINT / FREEZE</span><b>REVOKED</b></div>
+          <div><span>BUY / SELL TAX</span><b data-tax>0% / 0%</b></div>
+          <div><span>3D ENGINE</span><b>VRM + SPRINGBONE</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 003 — TOKENOMICS & WALLET -->
+  <section class="band" id="band-3">
+    <div class="col col-left">
+      <div class="editorial-block">
+        <div class="meta-line">
+          <span>003 — DISTRIBUTION</span>
+          <span id="supply-short">1B</span>
+        </div>
+        <div class="donut-wrap">
+          <div class="donut" id="donut"></div>
+          <div class="donut-center">
+            <span class="donut-num">1B</span>
+            <span class="micro">FIXED</span>
+          </div>
+        </div>
+        <div id="tk-rows" class="tk-rows"></div>
+      </div>
+    </div>
+
+    <div class="col-center-spacer"></div>
+
+    <div class="col col-right">
+      <div class="editorial-block">
+        <div class="meta-line">
+          <span>WALLET TERMINAL</span>
+          <span>PHANTOM / SOLFLARE</span>
+        </div>
+        <div class="spec-rows" style="margin-bottom:14px">
+          <div><span>ADDRESS</span><b id="bw-addr">NOT CONNECTED</b></div>
+          <div><span>SOL</span><b id="bw-sol">—</b></div>
+          <div><span>$<span data-ticker>YUZU</span></span><b id="bw-token">—</b></div>
+        </div>
+        <div class="key-grid">
+          <a class="gloss-key gloss-pink" data-buy="jupiter" href="#" target="_blank" rel="noopener">JUPITER ↗</a>
+          <a class="gloss-key" data-buy="raydium" href="#" target="_blank" rel="noopener">RAYDIUM ↗</a>
+          <a class="gloss-key" data-buy="pumpfun" href="#" target="_blank" rel="noopener">PUMP.FUN ↗</a>
+          <a class="gloss-key" data-buy="birdeye" href="#" target="_blank" rel="noopener">BIRDEYE ↗</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 004 — ROADMAP & LIVE SIGNAL -->
+  <section class="band" id="band-4">
+    <div class="col col-left">
+      <div class="editorial-block">
+        <div class="meta-line">
+          <span>004 — SEQUENCE</span>
+          <span>2026</span>
+        </div>
+        <div class="road-item"><b>01 / AWAKENING</b>
+          <p>Fair launch · LP burn · Interactive 3D webcore terminal</p>
+        </div>
+        <div class="road-item"><b>02 / EXPANSION</b>
+          <p>1K holders · CoinGecko · Custom VRM avatar drops</p>
+        </div>
+        <div class="road-item"><b>03 / UNIVERSE</b>
+          <p>10K holders · CEX · Full AI voice companion</p>
+        </div>
+        <div class="key-grid" style="margin-top:14px">
+          <a class="gloss-key gloss-pink" id="link-twitter" href="#" target="_blank" rel="noopener">X / TWITTER</a>
+          <a class="gloss-key" data-buy="dexscreener" href="#" target="_blank" rel="noopener">DEXSCREENER</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-center-spacer"></div>
+
+    <div class="col col-right">
+      <div class="editorial-block">
+        <div class="meta-line">
+          <span>LIVE SIGNAL</span>
+          <span>DEXSCREENER</span>
+        </div>
+        <div class="chart-box" id="chart-box">
+          <div class="chart-empty" id="chart-empty">
+            <p>AWAITING CA IN <code>src/config.js</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- LIVE 3D RIG / SKELETON BREAKDOWN HUD (shown in SKELETON / WIREFRAME mode) -->
+<aside class="terminal-block rig-hud" id="rig-hud" aria-hidden="true">
+  <div class="meta-line" style="margin-bottom:6px">
+    <span class="acid-text">◈ RIG BREAKDOWN // X-RAY</span>
+    <button class="gloss-key" id="btn-rig-close" style="padding:2px 6px;font-size:8px">✕</button>
+  </div>
+  <div class="rig-stats-grid">
+    <div><span class="micro">BONES</span><b id="rig-bones">—</b></div>
+    <div><span class="micro">TRIS</span><b id="rig-tris">—</b></div>
+    <div><span class="micro">SPRING</span><b id="rig-springs">—</b></div>
+    <div><span class="micro">IK</span><b>2-BONE</b></div>
+  </div>
+  <div class="quick-prompts" id="rig-parts" style="margin-top:8px">
+    <button type="button" class="qp-btn" data-rig="legs">Leg IK</button>
+    <button type="button" class="qp-btn" data-rig="hair">SpringBone</button>
+    <button type="button" class="qp-btn" data-rig="face">LookAt &amp; Face</button>
+    <button type="button" class="qp-btn" data-rig="spine">Spine &amp; Breath</button>
+  </div>
+</aside>
+
+<!-- COMPACT CHAT LAUNCHER PILL (prevents overlapping right-column buttons) -->
+<button class="gloss-btn gloss-pink chat-fab" id="btn-chat-toggle">&gt; CHAT AI</button>
+
+<!-- FIXED COLLAPSIBLE RETRO-TERMINAL VOICE AI DOCK (bottom-right) -->
+<aside class="terminal-block chat-dock collapsed" id="chat-dock" aria-hidden="true">
+  <div class="meta-line" style="margin-bottom:6px">
+    <span class="acid-text">&gt; YUZU_GUIDE.EXE</span>
+    <span style="display:flex;gap:5px">
+      <button class="gloss-key active" id="btn-voice" style="padding:3px 7px;font-size:8px">VOICE ON</button>
+      <button class="gloss-key" id="btn-chat-min" style="padding:3px 7px;font-size:8px" title="Hide chat">–</button>
+    </span>
+  </div>
+  <div class="chat-log" id="chat-log">
+    <div class="chat-msg bot">&gt; Hey! I'm Yuzu — your $YUZU companion. Click Market, Tour, Skeleton, or talk to me
+      about anything.</div>
+  </div>
+  <div class="quick-prompts" id="quick-prompts">
+    <button type="button" class="qp-btn" data-q="What pumped and dumped in crypto today?">Market</button>
+    <button type="button" class="qp-btn" data-q="Give me a guided tour of the site">Tour</button>
+    <button type="button" class="qp-btn" data-q="Show me your 3D skeleton rig breakdown">Skeleton</button>
+    <button type="button" class="qp-btn" data-q="How do I install your Chrome extension?">Extension</button>
+  </div>
+  <form class="chat-form" id="chat-form">
+    <input id="chat-input" type="text" placeholder="enter command or message…" autocomplete="off" />
+    <button type="submit" class="chat-send">↵</button>
+  </form>
+</aside>
+
+<!-- EDITORIAL BOTTOM BAR -->
+<footer class="hud-bottom">
+  <span class="bottom-hints">[P] PET · [C] CHAT · [M] MOD · [S] SKELETON · [T] TOUR · [L] LOGO</span>
+  <span>$<span data-ticker>YUZU</span>® ALL RIGHTS RESERVED</span>
+</footer>
+
+<!-- CYBER Y2K DOCS / WHITEPAPER MODAL -->
+<div class="docs-overlay" id="docs-overlay" aria-hidden="true">
+  <div class="docs-modal">
+    <div class="docs-head">
+      <div>
+        <span class="acid-text">DOCUMENTATION // V1.0</span>
+        <h2>$<span data-ticker>YUZU</span> PROTOCOL DOCS</h2>
+      </div>
+      <button class="gloss-key" id="btn-close-docs">ESC [✕]</button>
+    </div>
+    <div class="docs-tabs" id="docs-tabs">
+      <button class="gloss-key active" data-doc="lore">00 LORE</button>
+      <button class="gloss-key" data-doc="extension">CHROME EXT</button>
+      <button class="gloss-key" data-doc="overview">01 OVERVIEW</button>
+      <button class="gloss-key" data-doc="tokenomics">02 TOKENOMICS</button>
+      <button class="gloss-key" data-doc="security">03 SECURITY</button>
+      <button class="gloss-key" data-doc="tech">04 AI &amp; RIG</button>
+      <button class="gloss-key" data-doc="faq">05 FAQ</button>
+    </div>
+    <div class="docs-body" id="docs-body"></div>
+  </div>
+</div>
+
+<!-- CYBER Y2K LIQUID CHROME & GLASS LOGO FORGE MODAL -->
+<div class="docs-overlay" id="forge-overlay" aria-hidden="true">
+  <div class="docs-modal forge-modal">
+    <div class="docs-head">
+      <div>
+        <span class="acid-text">CYBER Y2K STUDIO // 1024×1024 PNG + 3D MEDALLION</span>
+        <h2>CHROME &amp; GLASS LOGO FORGE</h2>
+      </div>
+      <button class="gloss-key" id="btn-close-forge">ESC [X]</button>
+    </div>
+    <div class="forge-grid">
+      <div class="forge-preview-wrap">
+        <canvas id="forge-canvas" width="512" height="512"></canvas>
+      </div>
+      <div class="forge-controls">
+        <label class="forge-label">
+          <span class="micro">TICKER / TEXT</span>
+          <input id="forge-text" type="text" value="$YUZU" maxlength="14" autocomplete="off" />
+        </label>
+        <label class="forge-label">
+          <span class="micro">SUBTITLE</span>
+          <input id="forge-sub" type="text" value="SOLANA // 2026" maxlength="28" autocomplete="off" />
+        </label>
+        <div class="forge-group">
+          <span class="micro">MATERIAL TEXTURE</span>
+          <div class="key-grid" id="forge-materials">
+            <button class="gloss-key active" data-mat="chrome">LIQUID CHROME</button>
+            <button class="gloss-key" data-mat="glass">PRISM GLASS</button>
+            <button class="gloss-key" data-mat="pink">PINK CRYSTAL</button>
+            <button class="gloss-key" data-mat="acid">ACID CYBER</button>
+            <button class="gloss-key" data-mat="obsidian">OBSIDIAN</button>
+          </div>
+        </div>
+        <div class="forge-group">
+          <span class="micro">EMBLEM FRAME</span>
+          <div class="key-grid" id="forge-frames">
+            <button class="gloss-key active" data-frame="tribal">TRIBAL WINGS</button>
+            <button class="gloss-key" data-frame="halo">CHROME HALO</button>
+            <button class="gloss-key" data-frame="orb">GLASS ORB</button>
+            <button class="gloss-key" data-frame="sigil">HEX SIGIL</button>
+          </div>
+        </div>
+        <div class="forge-group">
+          <div class="key-grid">
+            <button class="gloss-key" id="forge-bg-toggle">BG: DARK VOID</button>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:auto">
+          <button class="gloss-btn gloss-pink" id="btn-forge-3d">PLACE IN 3D</button>
+          <button class="gloss-btn" id="btn-forge-dl">DOWNLOAD PNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMMUNITY 3D MOD STUDIO MODAL (DOWNLOAD BASE VRM/UV -> CUSTOMIZE -> UPLOAD LIVE) -->
+<div class="docs-overlay" id="mod-overlay" aria-hidden="true">
+  <div class="docs-modal mod-modal">
+    <div class="docs-head">
+      <div>
+        <span class="acid-text">CREATOR SANDBOX // DOWNLOAD · REMIX · UPLOAD LIVE</span>
+        <h2>$YUZU 3D MOD STUDIO</h2>
+      </div>
+      <button class="gloss-key" id="btn-close-mod">ESC [X]</button>
+    </div>
+    <div class="mod-grid">
+      <div class="mod-col">
+        <div class="mod-step">
+          <span class="acid-text">01 // DOWNLOAD BASE KIT</span>
+          <p class="mod-hint">Grab the base 3D <code>.VRM</code> for VRoid Studio / Blender, or export the live UV
+            texture PNG to paint outfits, tattoos &amp; logos in Photoshop, Procreate, or Canva.</p>
+          <div class="key-grid">
+            <button type="button" class="gloss-key" id="btn-mod-dl-vrm">DOWNLOAD .VRM</button>
+            <button type="button" class="gloss-key" id="btn-mod-dl-skin">SKIN / OUTFIT PNG</button>
+            <button type="button" class="gloss-key" id="btn-mod-dl-hair">HAIR UV PNG</button>
+          </div>
+        </div>
+
+        <div class="mod-step">
+          <span class="acid-text">02 // UPLOAD YOUR CUSTOM MOD</span>
+          <div class="key-grid" id="mod-slot-chips" style="margin:4px 0 6px">
+            <button type="button" class="gloss-key active" data-slot="skin">SLOT: SKIN / OUTFIT</button>
+            <button type="button" class="gloss-key" data-slot="hair">SLOT: HAIR</button>
+            <button type="button" class="gloss-key" data-slot="dress">SLOT: DRESS</button>
+          </div>
+          <div class="mod-dropzone" id="mod-dropzone">
+            <input type="file" id="mod-file-input" accept=".vrm,.glb,.png,.jpg,.jpeg,.webp" hidden />
+            <b>DROP .VRM MODEL OR .PNG TEXTURE HERE</b>
+            <span>or click to browse · applies live onto 3D Yuzu with full IK &amp; dance</span>
+          </div>
+        </div>
+
+        <div class="mod-step">
+          <span class="acid-text">OR QUICK-REMIX LIVE IN BROWSER</span>
+          <div class="mod-sliders">
+            <label class="mod-slider-row">
+              <span>HAIR HUE <b id="mod-hair-hue-val">0°</b></span>
+              <input type="range" id="mod-hair-hue" min="0" max="360" value="0" />
             </label>
-            <label class="forge-label">
-              <span class="micro">SUBTITLE</span>
-              <input id="forge-sub" type="text" value="SOLANA // 2026" maxlength="28" autocomplete="off" />
+            <label class="mod-slider-row">
+              <span>OUTFIT HUE <b id="mod-outfit-hue-val">0°</b></span>
+              <input type="range" id="mod-outfit-hue" min="0" max="360" value="0" />
             </label>
-            <div class="forge-group">
-              <span class="micro">MATERIAL TEXTURE</span>
-              <div class="key-grid" id="forge-materials">
-                <button class="gloss-key active" data-mat="chrome">LIQUID CHROME</button>
-                <button class="gloss-key" data-mat="glass">PRISM GLASS</button>
-                <button class="gloss-key" data-mat="pink">PINK CRYSTAL</button>
-                <button class="gloss-key" data-mat="acid">ACID CYBER</button>
-                <button class="gloss-key" data-mat="obsidian">OBSIDIAN</button>
-              </div>
-            </div>
-            <div class="forge-group">
-              <span class="micro">EMBLEM FRAME</span>
-              <div class="key-grid" id="forge-frames">
-                <button class="gloss-key active" data-frame="tribal">TRIBAL WINGS</button>
-                <button class="gloss-key" data-frame="halo">CHROME HALO</button>
-                <button class="gloss-key" data-frame="orb">GLASS ORB</button>
-                <button class="gloss-key" data-frame="sigil">HEX SIGIL</button>
-              </div>
-            </div>
-            <div class="forge-group">
-              <div class="key-grid">
-                <button class="gloss-key" id="forge-bg-toggle">BG: DARK VOID</button>
-              </div>
-            </div>
-            <div class="btn-row" style="margin-top:auto">
-              <button class="gloss-btn gloss-pink" id="btn-forge-3d">PLACE IN 3D</button>
-              <button class="gloss-btn" id="btn-forge-dl">DOWNLOAD PNG</button>
-            </div>
           </div>
+          <button type="button" class="gloss-key" id="btn-mod-reset" style="margin-top:6px">RESET TO DEFAULT
+            YUZU</button>
+        </div>
+      </div>
+
+      <div class="mod-col">
+        <div class="mod-step">
+          <span class="acid-text">03 // PUBLISH TO GALLERY</span>
+          <div class="mod-inputs">
+            <input id="mod-name" type="text" placeholder="MOD NAME (E.G. CYBER ANGEL)" maxlength="24"
+              autocomplete="off" />
+            <input id="mod-creator" type="text" placeholder="@YOUR_HANDLE" maxlength="20" autocomplete="off" />
+          </div>
+          <div class="btn-row" style="margin-top:8px">
+            <button type="button" class="gloss-btn gloss-pink" id="btn-mod-publish">PUBLISH MOD</button>
+            <button type="button" class="gloss-btn" id="btn-mod-share">SHARE ON X ↗</button>
+          </div>
+          <div class="mod-status" id="mod-status">READY // DOWNLOAD, REMIX, OR DROP A FILE</div>
+        </div>
+
+        <div class="mod-step" style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <span class="acid-text">COMMUNITY MODS // CLICK WEAR</span>
+          <div class="mod-gallery" id="mod-gallery"></div>
         </div>
       </div>
     </div>
+  </div>
+</div>
 
-    <!-- COMMUNITY 3D MOD STUDIO MODAL (DOWNLOAD BASE VRM/UV -> CUSTOMIZE -> UPLOAD LIVE) -->
-    <div class="docs-overlay" id="mod-overlay" aria-hidden="true">
-      <div class="docs-modal mod-modal">
-        <div class="docs-head">
-          <div>
-            <span class="acid-text">CREATOR SANDBOX // DOWNLOAD · REMIX · UPLOAD LIVE</span>
-            <h2>$YUZU 3D MOD STUDIO</h2>
-          </div>
-          <button class="gloss-key" id="btn-close-mod">ESC [X]</button>
-        </div>
-        <div class="mod-grid">
-          <div class="mod-col">
-            <div class="mod-step">
-              <span class="acid-text">01 // DOWNLOAD BASE KIT</span>
-              <p class="mod-hint">Grab the base 3D <code>.VRM</code> for VRoid Studio / Blender, or export the live UV texture PNG to paint outfits, tattoos &amp; logos in Photoshop, Procreate, or Canva.</p>
-              <div class="key-grid">
-                <button type="button" class="gloss-key" id="btn-mod-dl-vrm">DOWNLOAD .VRM</button>
-                <button type="button" class="gloss-key" id="btn-mod-dl-skin">SKIN / OUTFIT PNG</button>
-                <button type="button" class="gloss-key" id="btn-mod-dl-hair">HAIR UV PNG</button>
-              </div>
-            </div>
+<div class="toast" id="toast"></div>
+<script type="module" src="/src/main.js"></script>
+</body>
 
-            <div class="mod-step">
-              <span class="acid-text">02 // UPLOAD YOUR CUSTOM MOD</span>
-              <div class="key-grid" id="mod-slot-chips" style="margin:4px 0 6px">
-                <button type="button" class="gloss-key active" data-slot="skin">SLOT: SKIN / OUTFIT</button>
-                <button type="button" class="gloss-key" data-slot="hair">SLOT: HAIR</button>
-                <button type="button" class="gloss-key" data-slot="dress">SLOT: DRESS</button>
-              </div>
-              <div class="mod-dropzone" id="mod-dropzone">
-                <input type="file" id="mod-file-input" accept=".vrm,.glb,.png,.jpg,.jpeg,.webp" hidden />
-                <b>DROP .VRM MODEL OR .PNG TEXTURE HERE</b>
-                <span>or click to browse · applies live onto 3D Yuzu with full IK &amp; dance</span>
-              </div>
-            </div>
-
-            <div class="mod-step">
-              <span class="acid-text">OR QUICK-REMIX LIVE IN BROWSER</span>
-              <div class="mod-sliders">
-                <label class="mod-slider-row">
-                  <span>HAIR HUE <b id="mod-hair-hue-val">0°</b></span>
-                  <input type="range" id="mod-hair-hue" min="0" max="360" value="0" />
-                </label>
-                <label class="mod-slider-row">
-                  <span>OUTFIT HUE <b id="mod-outfit-hue-val">0°</b></span>
-                  <input type="range" id="mod-outfit-hue" min="0" max="360" value="0" />
-                </label>
-              </div>
-              <button type="button" class="gloss-key" id="btn-mod-reset" style="margin-top:6px">RESET TO DEFAULT YUZU</button>
-            </div>
-          </div>
-
-          <div class="mod-col">
-            <div class="mod-step">
-              <span class="acid-text">03 // PUBLISH TO GALLERY</span>
-              <div class="mod-inputs">
-                <input id="mod-name" type="text" placeholder="MOD NAME (E.G. CYBER ANGEL)" maxlength="24" autocomplete="off" />
-                <input id="mod-creator" type="text" placeholder="@YOUR_HANDLE" maxlength="20" autocomplete="off" />
-              </div>
-              <div class="btn-row" style="margin-top:8px">
-                <button type="button" class="gloss-btn gloss-pink" id="btn-mod-publish">PUBLISH MOD</button>
-                <button type="button" class="gloss-btn" id="btn-mod-share">SHARE ON X ↗</button>
-              </div>
-              <div class="mod-status" id="mod-status">READY // DOWNLOAD, REMIX, OR DROP A FILE</div>
-            </div>
-
-            <div class="mod-step" style="flex:1;min-height:0;display:flex;flex-direction:column">
-              <span class="acid-text">COMMUNITY MODS // CLICK WEAR</span>
-              <div class="mod-gallery" id="mod-gallery"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="toast" id="toast"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
 </html>
