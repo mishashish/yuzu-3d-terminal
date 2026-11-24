@@ -1,10 +1,14 @@
 (async function () {
-  if (window.top !== window || !chrome?.runtime?.id) return;
+  if (window.top !== window || !chrome?.runtime?.id || !document.body) return;
+  // Do not overlap the $YUZU 3D Terminal's own UI
+  if (/yuzuha-simulator\.vercel\.app$/i.test(location.hostname)) return;
 
   let host = null;
   let drawer = null;
   let latestMarket = null;
   let expanded = false;
+  let onMoveRef = null;
+  let onUpRef = null;
 
   const fmtPrice = (p) => (p >= 1000 ? `$${Math.round(p)}` : p >= 1 ? `$${p.toFixed(2)}` : `$${p.toFixed(5)}`);
 
@@ -43,8 +47,25 @@
     }
   }
 
+  function unmountWidget() {
+    if (onMoveRef) {
+      window.removeEventListener('pointermove', onMoveRef);
+      onMoveRef = null;
+    }
+    if (onUpRef) {
+      window.removeEventListener('pointerup', onUpRef);
+      onUpRef = null;
+    }
+    if (host) {
+      host.remove();
+      host = null;
+      drawer = null;
+      expanded = false;
+    }
+  }
+
   function mountWidget() {
-    if (host) return;
+    if (host || !document.body) return;
     host = document.createElement('div');
     host.id = 'yuzu-ext-floating';
     Object.assign(host.style, {
@@ -109,7 +130,6 @@
       unmountWidget();
     });
 
-    // Draggable pill (click toggles mini coin drawer, drag moves widget anywhere on screen)
     let dragging = false, moved = false, startX = 0, startY = 0, startRight = 18, startBottom = 18;
     bar.addEventListener('pointerdown', (e) => {
       if (e.target === closeBtn) return;
@@ -121,23 +141,25 @@
       startBottom = parseFloat(host.style.bottom) || 18;
       bar.style.cursor = 'grabbing';
     });
-    window.addEventListener('pointermove', (e) => {
-      if (!dragging) return;
+    onMoveRef = (e) => {
+      if (!dragging || !host) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       if (Math.hypot(dx, dy) > 4) moved = true;
       host.style.right = `${Math.max(8, startRight - dx)}px`;
       host.style.bottom = `${Math.max(8, startBottom - dy)}px`;
-    });
-    window.addEventListener('pointerup', () => {
-      if (!dragging) return;
+    };
+    onUpRef = () => {
+      if (!dragging || !drawer) return;
       dragging = false;
       bar.style.cursor = 'grab';
       if (!moved) {
         expanded = !expanded;
         drawer.style.display = expanded ? 'block' : 'none';
       }
-    });
+    };
+    window.addEventListener('pointermove', onMoveRef);
+    window.addEventListener('pointerup', onUpRef);
 
     bar.append(pill, closeBtn);
     host.append(drawer, bar);
@@ -145,32 +167,24 @@
     renderContent(latestMarket);
   }
 
-  function unmountWidget() {
-    if (host) {
-      host.remove();
-      host = null;
-      drawer = null;
-      expanded = false;
+  try {
+    const { widgetEnabled, market } = await chrome.storage.local.get(['widgetEnabled', 'market']);
+    latestMarket = market || null;
+    if (widgetEnabled !== false) mountWidget();
+
+    if (!Array.isArray(latestMarket) || !latestMarket.length) {
+      chrome.runtime.sendMessage({ type: 'REFRESH_MARKET' }, (resp) => {
+        if (chrome.runtime.lastError) return;
+        if (resp?.market) renderContent(resp.market);
+      });
     }
-  }
 
-  const { widgetEnabled, market } = await chrome.storage.local.get(['widgetEnabled', 'market']);
-  latestMarket = market || null;
-  if (widgetEnabled !== false) mountWidget();
-
-  if (!Array.isArray(latestMarket) || !latestMarket.length) {
-    chrome.runtime.sendMessage({ type: 'REFRESH_MARKET' }, (resp) => {
-      if (chrome.runtime.lastError) return;
-      if (resp?.market) renderContent(resp.market);
+    chrome.storage.onChanged.addListener((changes) => {
+      if (changes.market) renderContent(changes.market.newValue);
+      if (changes.widgetEnabled) {
+        if (changes.widgetEnabled.newValue === false) unmountWidget();
+        else mountWidget();
+      }
     });
-  }
-
-  // Always listen for toggle ON/OFF live without requiring a page reload!
-  chrome.storage.onChanged.addListener((changes) => {
-    if (changes.market) renderContent(changes.market.newValue);
-    if (changes.widgetEnabled) {
-      if (changes.widgetEnabled.newValue === false) unmountWidget();
-      else mountWidget();
-    }
-  });
+  } catch {}
 })();

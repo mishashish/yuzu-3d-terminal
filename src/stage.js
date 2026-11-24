@@ -116,6 +116,7 @@ export class CharacterStage {
   constructor(container, opts = {}) {
     this.container = container;
     this.opts = opts;
+    this.isMini = !!opts.isMini;
 
     this.clock = new THREE.Clock();
     this.t = 0;
@@ -200,8 +201,8 @@ export class CharacterStage {
   }
 
   _initRenderer() {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer = new THREE.WebGLRenderer({ antialias: !this.isMini, alpha: true, powerPreference: this.isMini ? 'default' : 'high-performance' });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMini ? 1.25 : 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.container.appendChild(this.renderer.domElement);
     window.addEventListener('resize', () => this._resize());
@@ -210,7 +211,7 @@ export class CharacterStage {
   _resize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, w < 768 ? 1.5 : 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMini ? 1.25 : (w < 768 ? 1.5 : 2)));
     this.renderer.setSize(w, h, false);
     if (this.camera) {
       this.camera.aspect = w / h;
@@ -315,8 +316,8 @@ export class CharacterStage {
       envMapIntensity: 1.7,
     });
 
-    // 1. FULL 360° CYBER Y2K 3D ENVIRONMENT INSTALLATION
-    // Surrounds the entire 360° arena with tribals, iridescent glass shards/prisms, chrome & glass orbs, 4-point stars, and holographic ribbons!
+    // 1. FULL 360° CYBER Y2K 3D ENVIRONMENT INSTALLATION (skipped in ultra-fast Chrome Extension ?mini=1 mode!)
+    if (!this.isMini) {
     const installGroup = new THREE.Group();
     this.scene.add(installGroup);
     const isMobile = window.innerWidth < 768;
@@ -511,6 +512,7 @@ export class CharacterStage {
         });
       }
     });
+    } // end !this.isMini
 
     // Real 3D Pulsing Heartbeat Aura Ring on the podium floor (pulses on every lub-dub!)
     this.heartAura = new THREE.Mesh(

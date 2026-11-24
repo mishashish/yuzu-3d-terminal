@@ -1,15 +1,32 @@
 let lastBrief = '';
 let lastPose = 'peace';
 let isSpeaking = false;
+let miniReady = false;
 
 const yuzuFrame = document.getElementById('yuzu-3d-frame');
 const stageWrap = document.getElementById('mini-3d-wrap');
 
 function notify3D(payload) {
+  if (!miniReady) return;
   try {
     yuzuFrame?.contentWindow?.postMessage(payload, '*');
   } catch {}
 }
+
+window.addEventListener('message', (e) => {
+  if (e.data?.type === 'YUZU_MINI_READY') {
+    miniReady = true;
+    stageWrap?.classList.add('ready');
+    notify3D({ type: 'YUZU_POSE', pose: lastPose });
+  }
+});
+
+// Defer heavy 3D iframe boot slightly so cached prices & UI render instantaneously at 0ms
+setTimeout(() => {
+  if (yuzuFrame && !yuzuFrame.getAttribute('src')) {
+    yuzuFrame.src = 'https://yuzuha-simulator.vercel.app/?mini=1';
+  }
+}, 60);
 
 const fmtPrice = (p) => {
   if (p >= 1000) return `$${Math.round(p).toLocaleString('en-US')}`;
@@ -70,15 +87,44 @@ function render(market, source = '', updatedAt = 0) {
     .join('');
 }
 
+async function fetchDirectFallback() {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 4500);
+  try {
+    const r = await fetch('https://yuzuha-simulator.vercel.app/api/crypto', { signal: ctrl.signal, cache: 'no-store' });
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (Array.isArray(j?.market) && j.market.length) {
+      const updatedAt = Date.now();
+      await chrome.storage.local.set({ market: j.market, source: 'YUZU API', updatedAt });
+      chrome.runtime.sendMessage({ type: 'UPDATE_BADGE', market: j.market }, () => void chrome.runtime.lastError);
+      return { market: j.market, source: 'YUZU API', updatedAt };
+    }
+  } catch {
+  } finally {
+    clearTimeout(t);
+  }
+  return null;
+}
+
 function requestRefresh() {
   const btn = document.getElementById('btn-refresh');
   const speech = document.getElementById('yuzu-speech');
   btn?.classList.add('spinning');
 
-  chrome.runtime.sendMessage({ type: 'REFRESH_MARKET' }, async (resp) => {
+  let settled = false;
+  const finish = async (resp) => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(watchdog);
     btn?.classList.remove('spinning');
-    if (!chrome.runtime.lastError && resp?.ok && resp.market?.length) {
+    if (resp?.ok && resp.market?.length) {
       render(resp.market, resp.source, resp.updatedAt);
+      return;
+    }
+    const direct = await fetchDirectFallback();
+    if (direct?.market?.length) {
+      render(direct.market, direct.source, direct.updatedAt);
       return;
     }
     try {
@@ -89,11 +135,30 @@ function requestRefresh() {
         speech.textContent = 'Live feed unreachable right now. Click R to retry.';
       }
     } catch {}
-  });
+  };
+
+  // Watchdog: if MV3 Service Worker cold-start stalls > 4.2s, fall back directly from popup!
+  const watchdog = setTimeout(() => finish(null), 4200);
+
+  try {
+    chrome.runtime.sendMessage({ type: 'REFRESH_MARKET' }, (resp) => {
+      if (chrome.runtime.lastError) finish(null);
+      else finish(resp);
+    });
+  } catch {
+    finish(null);
+  }
 }
 
+let cachedVoices = [];
+const loadVoices = () => {
+  cachedVoices = window.speechSynthesis?.getVoices?.() || [];
+};
+loadVoices();
+if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = loadVoices;
+
 function pickCleanEnglishVoice() {
-  const voices = window.speechSynthesis?.getVoices?.() || [];
+  const voices = cachedVoices.length ? cachedVoices : (window.speechSynthesis?.getVoices?.() || []);
   const en = voices.filter((v) => v.lang.toLowerCase().startsWith('en'));
   const prefs = [/aria|jenny|natural|neural|google us/i, /samantha|zira|female/i];
   for (const re of prefs) {
@@ -132,7 +197,7 @@ btnSpeak?.addEventListener('click', () => {
   window.speechSynthesis.speak(u);
 });
 
-window.addEventListener('unload', () => {
+window.addEventListener('pagehide', () => {
   try { window.speechSynthesis?.cancel(); } catch {}
 });
 

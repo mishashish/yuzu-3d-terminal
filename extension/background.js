@@ -8,21 +8,43 @@ const COINS = [
   { sym: 'JUP', okx: 'JUP-USDT', binance: 'JUPUSDT', cg: 'jupiter-exchange-solana' },
 ];
 
+let refreshInFlight = null;
+
+async function fetchJson(url, timeoutMs = 4500) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function updateBadge(market) {
   if (!Array.isArray(market)) return;
   const sol = market.find((m) => m.sym === 'SOL') || market[0];
   if (!sol || Number.isNaN(sol.pct)) return;
   const sign = sol.pct >= 0 ? '+' : '';
-  chrome.action.setBadgeText({ text: `${sign}${sol.pct.toFixed(0)}%` });
-  chrome.action.setBadgeBackgroundColor({ color: sol.pct >= 0 ? '#16a34a' : '#ff4d9e' });
+  try {
+    chrome.action.setBadgeText({ text: `${sign}${sol.pct.toFixed(0)}%` });
+    chrome.action.setBadgeBackgroundColor({ color: sol.pct >= 0 ? '#16a34a' : '#ff4d9e' });
+  } catch {}
+}
+
+async function fetchFromYuzuAPI() {
+  const j = await fetchJson('https://yuzuha-simulator.vercel.app/api/crypto', 4000);
+  if (!j || !Array.isArray(j.market) || j.market.length < 4) return null;
+  return j.market;
 }
 
 async function fetchFromOKX() {
   const results = await Promise.all(
     COINS.map(async (c) => {
-      const r = await fetch(`https://www.okx.com/api/v5/market/ticker?instId=${c.okx}`);
-      if (!r.ok) return null;
-      const j = await r.json();
+      const j = await fetchJson(`https://www.okx.com/api/v5/market/ticker?instId=${c.okx}`, 4200);
       const d = j?.data?.[0];
       if (!d) return null;
       const last = parseFloat(d.last);
@@ -37,9 +59,7 @@ async function fetchFromOKX() {
 
 async function fetchFromBinance() {
   const syms = encodeURIComponent(JSON.stringify(COINS.map((c) => c.binance)));
-  const r = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${syms}`);
-  if (!r.ok) return null;
-  const arr = await r.json();
+  const arr = await fetchJson(`https://api.binance.com/api/v3/ticker/24hr?symbols=${syms}`, 4200);
   if (!Array.isArray(arr) || !arr.length) return null;
   return arr.map((x) => ({
     sym: x.symbol.replace('USDT', ''),
@@ -50,11 +70,11 @@ async function fetchFromBinance() {
 
 async function fetchFromCoinGecko() {
   const ids = COINS.map((c) => c.cg).join(',');
-  const r = await fetch(
-    `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`
+  const j = await fetchJson(
+    `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`,
+    4500
   );
-  if (!r.ok) return null;
-  const j = await r.json();
+  if (!j) return null;
   const out = COINS.filter((c) => j[c.cg]?.usd != null).map((c) => ({
     sym: c.sym,
     price: Number(j[c.cg].usd),
@@ -67,7 +87,6 @@ async function maybeNotifyMovers(market) {
   try {
     const { alertsEnabled, lastAlertAt = 0 } = await chrome.storage.local.get(['alertsEnabled', 'lastAlertAt']);
     if (alertsEnabled === false) return;
-    // Cooldown: at most 1 notification every 30 minutes so it never spams
     if (Date.now() - lastAlertAt < 30 * 60 * 1000) return;
 
     const bigMover = [...market].sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))[0];
@@ -85,10 +104,20 @@ async function maybeNotifyMovers(market) {
   } catch {}
 }
 
-async function refreshMarket() {
+function ensureAlarm() {
+  try {
+    chrome.alarms.get('yuzuMarketPoll', (existing) => {
+      if (!existing) chrome.alarms.create('yuzuMarketPoll', { periodInMinutes: 2 });
+    });
+  } catch {}
+}
+
+async function _doRefreshMarket() {
+  ensureAlarm();
   let market = null;
   let source = '';
   for (const [name, fn] of [
+    ['YUZU API', fetchFromYuzuAPI],
     ['OKX', fetchFromOKX],
     ['Binance', fetchFromBinance],
     ['CoinGecko', fetchFromCoinGecko],
@@ -110,13 +139,22 @@ async function refreshMarket() {
   return { market, source, updatedAt };
 }
 
+function refreshMarket() {
+  if (!refreshInFlight) {
+    refreshInFlight = _doRefreshMarket().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.alarms.create('yuzuMarketPoll', { periodInMinutes: 2 });
+  ensureAlarm();
   refreshMarket();
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  chrome.alarms.create('yuzuMarketPoll', { periodInMinutes: 2 });
+  ensureAlarm();
   refreshMarket();
 });
 
@@ -126,7 +164,9 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === 'REFRESH_MARKET') {
-    refreshMarket().then((data) => sendResponse(data ? { ok: true, ...data } : { ok: false }));
+    refreshMarket()
+      .then((data) => sendResponse(data ? { ok: true, ...data } : { ok: false }))
+      .catch(() => sendResponse({ ok: false }));
     return true;
   }
   if (msg?.type === 'UPDATE_BADGE' && Array.isArray(msg.market)) {

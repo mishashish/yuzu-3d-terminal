@@ -14,10 +14,14 @@ if (isMini) document.body.classList.add('mini-mode');
 
 const stage = new CharacterStage(document.getElementById('stage-fixed'), {
   modelUrl: TOKEN.modelUrl,
+  isMini,
   onProgress: (pct) => (loaderText.textContent = isMini ? `${pct}%` : `LOADING VRM MODEL… ${pct}%`),
   onLoaded: () => {
     loader.classList.add('hidden');
-    if (isMini) stage.setCameraPreset('mini');
+    if (isMini) {
+      stage.setCameraPreset('mini');
+      try { window.parent?.postMessage({ type: 'YUZU_MINI_READY' }, '*'); } catch {}
+    }
   },
   onError: (e) => {
     console.error(e);
