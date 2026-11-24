@@ -1290,14 +1290,30 @@ export class CharacterStage {
             ctx.arc(w * 0.50, h * 0.290, w * 0.006, 0, Math.PI * 2);
             ctx.fill();
 
+            // Seamless halter neck straps: curve from cup peaks around the base of the neck
+            // and continue across the VRoid neck UV seam to tie cleanly at the back of the neck
             ctx.strokeStyle = '#e63a9b';
-            ctx.lineWidth = Math.max(2.5, w * 0.0045);
+            ctx.lineWidth = Math.max(2.5, w * 0.0046);
+            ctx.lineCap = 'round';
             ctx.beginPath();
+            // Front chest -> side-of-neck base seam (u=0.448/0.552, v=0.089)
             ctx.moveTo(w * 0.444, h * 0.198);
-            ctx.lineTo(w * 0.474, h * 0.068);
+            ctx.quadraticCurveTo(w * 0.464, h * 0.135, w * 0.442, h * 0.089);
             ctx.moveTo(w * 0.556, h * 0.198);
-            ctx.lineTo(w * 0.526, h * 0.068);
+            ctx.quadraticCurveTo(w * 0.536, h * 0.135, w * 0.558, h * 0.089);
+            // Back-of-neck UV island continuation (u=0.283->0.243 & 0.717->0.757, v=0.109->0.102)
+            ctx.moveTo(w * 0.288, h * 0.109);
+            ctx.quadraticCurveTo(w * 0.265, h * 0.105, w * 0.240, h * 0.102);
+            ctx.moveTo(w * 0.712, h * 0.109);
+            ctx.quadraticCurveTo(w * 0.735, h * 0.105, w * 0.760, h * 0.102);
             ctx.stroke();
+
+            // Cute tiny tie-knot accent at the back center of the neck
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(w * 0.243, h * 0.102, w * 0.0045, 0, Math.PI * 2);
+            ctx.arc(w * 0.757, h * 0.102, w * 0.0045, 0, Math.PI * 2);
+            ctx.fill();
 
             // 2. Bare hips + Sleek High-Cut String-Tie Bikini Bottoms (thin hip strings, NO boxy sides!)
             ctx.fillStyle = skinBase;
