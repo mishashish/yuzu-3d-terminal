@@ -270,7 +270,7 @@ export function initModStudio(stage, toast, ai) {
   document.getElementById('btn-mod-share')?.addEventListener('click', () => {
     const name = (nameInput?.value || '').trim().toUpperCase() || 'MY CUSTOM YUZU';
     const text = encodeURIComponent(
-      `Just customized my own 3D $YUZU mod "${name}" in the live browser Mod Studio on @yuzu_terminal!\n\nDownload the VRM & remix yours:`
+      `Just customized my own 3D $YUZU mod "${name}" in the live browser Mod Studio on @girl_yuzu_!\n\nDownload the VRM & remix yours:`
     );
     const url = encodeURIComponent(window.location.origin);
     window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener');

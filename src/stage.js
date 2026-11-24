@@ -70,10 +70,10 @@ function glowTexture() {
   c.width = c.height = s;
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(s / 2, s / 2, 4, s / 2, s / 2, s / 2);
-  grad.addColorStop(0, 'rgba(20, 241, 149, 0.5)');
-  grad.addColorStop(0.35, 'rgba(153, 69, 255, 0.34)');
-  grad.addColorStop(0.7, 'rgba(153, 69, 255, 0.08)');
-  grad.addColorStop(1, 'rgba(153, 69, 255, 0)');
+  grad.addColorStop(0, 'rgba(155, 232, 255, 0.36)');
+  grad.addColorStop(0.35, 'rgba(180, 200, 230, 0.18)');
+  grad.addColorStop(0.7, 'rgba(120, 145, 180, 0.05)');
+  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, s, s);
   const t = new THREE.CanvasTexture(c);
@@ -253,20 +253,20 @@ export class CharacterStage {
     this.scene.environmentIntensity = 0.75;
     pmrem.dispose();
 
-    // Cyber Y2K Palette Lighting (#FF8BCB Glossy Pink, #A66BFF Electric Purple, #72E7FF Cyber Blue)
-    this.scene.add(new THREE.HemisphereLight(0xd9d9e8, 0x15131c, 1.0));
-    const key = new THREE.DirectionalLight(0xffffff, 1.45);
+    // Editorial Obsidian & Liquid Mercury Studio Lighting (razor-sharp silver chrome + subtle prismatic cyan/amber rim, zero AI-purple slop!)
+    this.scene.add(new THREE.HemisphereLight(0xeef4ff, 0x05070a, 1.05));
+    const key = new THREE.DirectionalLight(0xffffff, 1.6);
     key.position.set(1.2, 3.2, 2.8);
     this.scene.add(key);
-    const rimPink = new THREE.DirectionalLight(0xff8bcb, 2.4);
-    rimPink.position.set(-2.8, 2.2, -1.8);
-    this.scene.add(rimPink);
-    const rimBlue = new THREE.DirectionalLight(0x72e7ff, 2.3);
-    rimBlue.position.set(2.8, 1.8, -1.8);
-    this.scene.add(rimBlue);
-    const rimPurple = new THREE.DirectionalLight(0xa66bff, 1.2);
-    rimPurple.position.set(0, -1.2, 2.2);
-    this.scene.add(rimPurple);
+    const rimIce = new THREE.DirectionalLight(0x9be8ff, 2.35);
+    rimIce.position.set(-2.8, 2.3, -1.8);
+    this.scene.add(rimIce);
+    const rimWarm = new THREE.DirectionalLight(0xffcfa3, 1.55);
+    rimWarm.position.set(2.8, 1.8, -1.8);
+    this.scene.add(rimWarm);
+    const rimSteel = new THREE.DirectionalLight(0x6e85a8, 0.9);
+    rimSteel.position.set(0, -1.2, 2.2);
+    this.scene.add(rimSteel);
 
     this.pivot = new THREE.Group();
     this.scene.add(this.pivot);
@@ -274,35 +274,35 @@ export class CharacterStage {
     this.lookTarget = new THREE.Object3D();
     this.scene.add(this.lookTarget);
 
-    // Fast GPU-friendly liquid chrome & glossy glass materials (MeshStandardMaterial compiles 3x faster than Physical+Iridescence!)
+    // High-fashion Liquid Mercury Chrome & Smoked Obsidian Glass materials
     this.artObjects = [];
     const chromeMat = new THREE.MeshStandardMaterial({
-      color: 0xe6e6f5,
-      metalness: 0.96,
-      roughness: 0.10,
-      envMapIntensity: 1.35,
+      color: 0xf2f6ff,
+      metalness: 0.98,
+      roughness: 0.06,
+      envMapIntensity: 1.75,
     });
     const darkChromeMat = new THREE.MeshStandardMaterial({
-      color: 0x453e5c,
-      metalness: 0.92,
-      roughness: 0.16,
-      envMapIntensity: 1.25,
+      color: 0x1b222e,
+      metalness: 0.96,
+      roughness: 0.09,
+      envMapIntensity: 1.65,
     });
     const pinkGlassMat = new THREE.MeshStandardMaterial({
-      color: 0xff8bcb,
-      metalness: 0.35,
-      roughness: 0.08,
+      color: 0xd6e6ff,
+      metalness: 0.55,
+      roughness: 0.05,
       transparent: true,
-      opacity: 0.74,
-      envMapIntensity: 1.6,
+      opacity: 0.72,
+      envMapIntensity: 1.9,
     });
     const cyanGlassMat = new THREE.MeshStandardMaterial({
-      color: 0x72e7ff,
-      metalness: 0.35,
-      roughness: 0.08,
+      color: 0x9be8ff,
+      metalness: 0.45,
+      roughness: 0.05,
       transparent: true,
-      opacity: 0.74,
-      envMapIntensity: 1.6,
+      opacity: 0.68,
+      envMapIntensity: 1.9,
     });
 
     // 1. FULL 360° CYBER Y2K 3D ENVIRONMENT INSTALLATION (skipped in ultra-fast Chrome Extension ?mini=1 mode!)
@@ -311,28 +311,28 @@ export class CharacterStage {
     this.scene.add(installGroup);
     const isMobile = window.innerWidth < 768;
 
-    // Subtle glowing Cyber Y2K perspective floor grid fading into the dark horizon
-    const grid = new THREE.GridHelper(22, isMobile ? 22 : 34, 0x3b2c59, 0x1c172b);
+    // Subtle smoked-steel perspective floor grid fading into obsidian void
+    const grid = new THREE.GridHelper(22, isMobile ? 22 : 34, 0x222c3b, 0x0d1118);
     grid.position.y = -0.002;
     grid.material.transparent = true;
-    grid.material.opacity = 0.42;
+    grid.material.opacity = 0.36;
     installGroup.add(grid);
 
     const ribbonMat = new THREE.MeshStandardMaterial({
-      color: 0xe6e0ff,
-      metalness: 0.80,
-      roughness: 0.12,
+      color: 0xe8f0fc,
+      metalness: 0.95,
+      roughness: 0.07,
       transparent: true,
-      opacity: 0.84,
-      envMapIntensity: 1.45,
+      opacity: 0.88,
+      envMapIntensity: 1.8,
     });
     const violetGlassMat = new THREE.MeshStandardMaterial({
-      color: 0xa66bff,
-      metalness: 0.35,
+      color: 0x2a3547,
+      metalness: 0.86,
       roughness: 0.08,
       transparent: true,
-      opacity: 0.72,
-      envMapIntensity: 1.5,
+      opacity: 0.76,
+      envMapIntensity: 1.7,
     });
 
     // A. 360° Flowing Iridescent Liquid-Glass Ribbons (6 sculptural waves encircling the entire 360° dome)
@@ -539,7 +539,7 @@ export class CharacterStage {
     this.ring1.position.y = 0.002;
     this.scene.add(this.ring1);
 
-    this.ring2 = new THREE.Mesh(new THREE.RingGeometry(0.86, 0.864, 96, 1, 0, Math.PI * 1.4), ringMat(0xff8bcb, 0.32));
+    this.ring2 = new THREE.Mesh(new THREE.RingGeometry(0.86, 0.864, 96, 1, 0, Math.PI * 1.4), ringMat(0x9be8ff, 0.28));
     this.ring2.rotation.x = -Math.PI / 2;
     this.ring2.position.y = 0.002;
     this.scene.add(this.ring2);
@@ -548,7 +548,7 @@ export class CharacterStage {
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     this.sparkSeeds = [];
-    const palette = [new THREE.Color('#FF8BCB'), new THREE.Color('#A66BFF'), new THREE.Color('#72E7FF'), new THREE.Color('#D9D9E8'), new THREE.Color('#B8FF65')];
+    const palette = [new THREE.Color('#FFFFFF'), new THREE.Color('#DCE6F5'), new THREE.Color('#9BE8FF'), new THREE.Color('#FFCFA3'), new THREE.Color('#B8C8E0')];
     for (let i = 0; i < count; i++) {
       this.sparkSeeds.push({
         r: 0.52 + Math.random() * 0.9,

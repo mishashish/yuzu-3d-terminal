@@ -17,7 +17,7 @@ export const TOKEN = {
   sellTax: 0,
 
   links: {
-    twitter: 'https://x.com/',
+    twitter: 'https://x.com/girl_yuzu_',
     telegram: 'https://t.me/',
   },
 
