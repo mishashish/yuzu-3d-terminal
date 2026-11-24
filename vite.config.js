@@ -122,6 +122,15 @@ function yuzuBackendPlugin() {
 
 export default defineConfig({
   plugins: [yuzuBackendPlugin()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'three-vendor': ['three', '@pixiv/three-vrm'],
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api/ai': {

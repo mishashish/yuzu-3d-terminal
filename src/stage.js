@@ -48,7 +48,7 @@ const REACTIONS = {
   headpat: { dur: 2.2, text: 'Hehe~ pet me a little more!' },
   kiss: { dur: 2.5, text: 'Catch this blown kiss~' },
   peace: { dur: 2.4, text: 'Take a pic of me!' },
-  dance: { dur: 4.2, text: 'Dancing just for you~' },
+  dance: { dur: 5.6, text: 'Dancing just for you~' },
   spin: { dur: 2.2, text: 'Ta-da~ check me out from every angle!' },
   happy: { dur: 2.0, text: 'WAGMI! Sending $YUZU to the moon!' },
   shy: { dur: 2.3, text: 'Hey, don\'t stare so close...' },
@@ -156,6 +156,8 @@ export class CharacterStage {
     this.lastBeatTrigger = 0;
     this.heartbeatAudioOn = false;
     this.audioCtx = null;
+    this.danceMusicTimers = [];
+    this.danceMusicGain = null;
     this.offended = false;
     this.offendedBlend = 0;
     this.patCount = 0;
@@ -286,34 +288,38 @@ export class CharacterStage {
       iridescenceThicknessRange: [220, 620],
       clearcoat: 1.0,
     });
+    // Fast glossy glass materials (iridescence + clearcoat + env reflections WITHOUT expensive multi-pass transmission!)
     const pinkGlassMat = new THREE.MeshPhysicalMaterial({
       color: 0xff8bcb,
-      metalness: 0.10,
+      metalness: 0.22,
       roughness: 0.05,
-      transmission: 0.78,
-      thickness: 0.7,
-      ior: 1.48,
-      iridescence: 0.9,
+      transparent: true,
+      opacity: 0.72,
+      iridescence: 1.0,
+      iridescenceIOR: 1.42,
       clearcoat: 1.0,
+      envMapIntensity: 1.7,
     });
     const cyanGlassMat = new THREE.MeshPhysicalMaterial({
       color: 0x72e7ff,
-      metalness: 0.12,
+      metalness: 0.22,
       roughness: 0.06,
-      transmission: 0.74,
-      thickness: 0.6,
-      ior: 1.45,
-      iridescence: 0.85,
+      transparent: true,
+      opacity: 0.72,
+      iridescence: 0.95,
+      iridescenceIOR: 1.40,
       clearcoat: 1.0,
+      envMapIntensity: 1.7,
     });
 
     // 1. FULL 360° CYBER Y2K 3D ENVIRONMENT INSTALLATION
     // Surrounds the entire 360° arena with tribals, iridescent glass shards/prisms, chrome & glass orbs, 4-point stars, and holographic ribbons!
     const installGroup = new THREE.Group();
     this.scene.add(installGroup);
+    const isMobile = window.innerWidth < 768;
 
     // Subtle glowing Cyber Y2K perspective floor grid fading into the dark horizon
-    const grid = new THREE.GridHelper(22, 34, 0x3b2c59, 0x1c172b);
+    const grid = new THREE.GridHelper(22, isMobile ? 22 : 34, 0x3b2c59, 0x1c172b);
     grid.position.y = -0.002;
     grid.material.transparent = true;
     grid.material.opacity = 0.42;
@@ -321,24 +327,24 @@ export class CharacterStage {
 
     const ribbonMat = new THREE.MeshPhysicalMaterial({
       color: 0xe6e0ff,
-      metalness: 0.72,
+      metalness: 0.76,
       roughness: 0.08,
+      transparent: true,
+      opacity: 0.84,
       iridescence: 1.0,
       iridescenceIOR: 1.45,
       iridescenceThicknessRange: [220, 680],
       clearcoat: 1.0,
-      transmission: 0.28,
-      thickness: 0.35,
     });
     const violetGlassMat = new THREE.MeshPhysicalMaterial({
       color: 0xa66bff,
-      metalness: 0.14,
+      metalness: 0.24,
       roughness: 0.05,
-      transmission: 0.78,
-      thickness: 0.65,
-      ior: 1.48,
-      iridescence: 0.95,
+      transparent: true,
+      opacity: 0.70,
+      iridescence: 1.0,
       clearcoat: 1.0,
+      envMapIntensity: 1.6,
     });
 
     // A. 360° Flowing Iridescent Liquid-Glass Ribbons (6 sculptural waves encircling the entire 360° dome)
@@ -381,8 +387,9 @@ export class CharacterStage {
     starGeo.center();
 
     const starMats = [chromeMat, pinkGlassMat, cyanGlassMat, chromeMat];
-    for (let i = 0; i < 28; i++) {
-      const angle = (i / 28) * Math.PI * 2 + (i % 2) * 0.11;
+    const starCount = isMobile ? 16 : 28;
+    for (let i = 0; i < starCount; i++) {
+      const angle = (i / starCount) * Math.PI * 2 + (i % 2) * 0.11;
       const r = 2.45 + (i % 4) * 0.62;
       const y = 0.35 + ((i * 7) % 10) * 0.28;
       const sc = 0.065 + (i % 3) * 0.032;
@@ -394,12 +401,13 @@ export class CharacterStage {
       this.artObjects.push({ mesh: st, rx: 0.12 * (i % 2 ? 1 : -1), ry: 0.45 + (i % 3) * 0.15, baseY: y, phase: i * 0.9 });
     }
 
-    // C. 360° Faceted Crystal Glass Shards & Prisms ("стекляшки" — 24 iridescent shards floating all around 360°)
+    // C. 360° Faceted Crystal Glass Shards & Prisms (iridescent shards floating all around 360°)
     const shardGeo = new THREE.OctahedronGeometry(0.16, 0);
     shardGeo.scale(0.62, 1.85, 0.52);
     const shardMats = [pinkGlassMat, cyanGlassMat, violetGlassMat, chromeMat, ribbonMat];
-    for (let i = 0; i < 24; i++) {
-      const angle = (i / 24) * Math.PI * 2 + 0.18;
+    const shardCount = isMobile ? 14 : 24;
+    for (let i = 0; i < shardCount; i++) {
+      const angle = (i / shardCount) * Math.PI * 2 + 0.18;
       const r = 2.35 + (i % 3) * 0.78;
       const y = 0.38 + ((i * 5) % 9) * 0.31;
       const sc = 0.68 + (i % 4) * 0.24;
@@ -416,11 +424,12 @@ export class CharacterStage {
       });
     }
 
-    // D. 360° Glossy Chrome & Translucent Glass Orbs (26 floating spheres encircling the full 360° space)
-    const decoOrbGeo = new THREE.SphereGeometry(1, 24, 24);
+    // D. 360° Glossy Chrome & Translucent Glass Orbs (optimized 16x16 segments for 60 FPS)
+    const decoOrbGeo = new THREE.SphereGeometry(1, 16, 16);
     const orbMats = [pinkGlassMat, chromeMat, cyanGlassMat, violetGlassMat, chromeMat];
-    for (let i = 0; i < 26; i++) {
-      const angle = (i / 26) * Math.PI * 2 + 0.07;
+    const orbCount = isMobile ? 16 : 26;
+    for (let i = 0; i < orbCount; i++) {
+      const angle = (i / orbCount) * Math.PI * 2 + 0.07;
       // Keep a clean pocket directly behind Yuzu's face so her silhouette stays crisp
       const isCenterBack = Math.abs(Math.sin(angle)) < 0.24 && Math.cos(angle) > 0.8;
       const r = isCenterBack ? 4.3 : 2.25 + (i % 4) * 0.68;
@@ -766,6 +775,9 @@ export class CharacterStage {
       leveledUp = true;
     }
 
+    if (type === 'dance') this._startDanceMusic(def.dur);
+    else this._stopDanceMusic();
+
     if (type === 'headpat') this.patCount++;
     if (type !== 'pout' && type !== 'bonk') this._burstHearts(origin || new THREE.Vector3(0, 1.38, 0.14));
     const displayText = leveledUp ? `BOND LVL ${this.bondLevel} UNLOCKED ♡` : (customText || def.text);
@@ -811,6 +823,105 @@ export class CharacterStage {
     };
     thump(0, 68, 0.22); // LUB
     thump(0.19, 54, 0.14); // DUB
+  }
+
+  _stopDanceMusic() {
+    this.danceMusicTimers.forEach(clearTimeout);
+    this.danceMusicTimers = [];
+    if (this.danceMusicGain && this.audioCtx) {
+      try {
+        const now = this.audioCtx.currentTime;
+        this.danceMusicGain.gain.cancelScheduledValues(now);
+        this.danceMusicGain.gain.linearRampToValueAtTime(0.0001, now + 0.18);
+      } catch {}
+    }
+  }
+
+  _startDanceMusic(durationSec = 5.6) {
+    this._stopDanceMusic();
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!this.audioCtx) this.audioCtx = new AC();
+    if (this.audioCtx.state === 'suspended') this.audioCtx.resume().catch(() => {});
+
+    const ctx = this.audioCtx;
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.001, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(0.24, ctx.currentTime + 0.12);
+    master.gain.setValueAtTime(0.24, ctx.currentTime + Math.max(0.4, durationSec - 0.55));
+    master.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + durationSec);
+    master.connect(ctx.destination);
+    this.danceMusicGain = master;
+
+    // 130 BPM Cyber Y2K Hyperpop Synth Groove (kick + hi-hat + octave bass + sparkling arpeggio!)
+    const step = 60 / 130 / 2; // eighth-note step (~0.23s)
+    const totalSteps = Math.floor(durationSec / step);
+    const arpNotes = [523.25, 659.25, 783.99, 1046.5, 987.77, 783.99, 659.25, 880.0]; // C5 E5 G5 C6 B5 G5 E5 A5
+    const bassNotes = [130.81, 130.81, 146.83, 164.81, 110.0, 110.0, 123.47, 146.83];
+    const t0 = ctx.currentTime + 0.03;
+
+    for (let i = 0; i < totalSteps; i++) {
+      const st = t0 + i * step;
+
+      // Punchy 4-on-the-floor kick (every 2 eighth-notes)
+      if (i % 2 === 0) {
+        const kick = ctx.createOscillator();
+        const kg = ctx.createGain();
+        kick.type = 'sine';
+        kick.frequency.setValueAtTime(145, st);
+        kick.frequency.exponentialRampToValueAtTime(38, st + 0.13);
+        kg.gain.setValueAtTime(0.75, st);
+        kg.gain.exponentialRampToValueAtTime(0.001, st + 0.16);
+        kick.connect(kg);
+        kg.connect(master);
+        kick.start(st);
+        kick.stop(st + 0.17);
+      }
+
+      // Crisp off-beat hi-hat sparkle
+      if (i % 2 === 1) {
+        const hat = ctx.createOscillator();
+        const hg = ctx.createGain();
+        hat.type = 'square';
+        hat.frequency.setValueAtTime(5800 + (i % 3) * 600, st);
+        hg.gain.setValueAtTime(0.08, st);
+        hg.gain.exponentialRampToValueAtTime(0.001, st + 0.045);
+        hat.connect(hg);
+        hg.connect(master);
+        hat.start(st);
+        hat.stop(st + 0.05);
+      }
+
+      // Bouncy Y2K synth bass
+      const bass = ctx.createOscillator();
+      const bg = ctx.createGain();
+      bass.type = 'sawtooth';
+      const bf = bassNotes[Math.floor(i / 2) % bassNotes.length] * (i % 2 === 1 ? 2 : 1);
+      bass.frequency.setValueAtTime(bf, st);
+      bg.gain.setValueAtTime(0.16, st);
+      bg.gain.exponentialRampToValueAtTime(0.001, st + step * 0.85);
+      bass.connect(bg);
+      bg.connect(master);
+      bass.start(st);
+      bass.stop(st + step * 0.9);
+
+      // Glossy Y2K hyperpop arpeggio lead
+      const lead = ctx.createOscillator();
+      const lg = ctx.createGain();
+      lead.type = 'triangle';
+      lead.frequency.setValueAtTime(arpNotes[i % arpNotes.length], st);
+      lg.gain.setValueAtTime(0.22, st);
+      lg.gain.exponentialRampToValueAtTime(0.001, st + step * 0.9);
+      lead.connect(lg);
+      lg.connect(master);
+      lead.start(st);
+      lead.stop(st + step * 0.95);
+    }
+
+    const cleanup = setTimeout(() => {
+      try { master.disconnect(); } catch {}
+    }, (durationSec + 0.4) * 1000);
+    this.danceMusicTimers.push(cleanup);
   }
 
   setParam(key, val) {
@@ -1829,6 +1940,11 @@ export class CharacterStage {
   }
 
   _tick() {
+    // Pause rendering completely when browser tab is hidden to save 100% CPU/GPU
+    if (document.hidden) {
+      this.clock.getDelta();
+      return;
+    }
     const dt = Math.min(this.clock.getDelta(), 0.05);
     this.t += dt;
 
