@@ -1140,71 +1140,119 @@ export class CharacterStage {
           const { skinBase, skinEdge, skinShadow } = paintBaseSkin(ctx, w, h);
 
           if (style === 'beach') {
-            // === CYBER Y2K SUMMER BEACH SWIMWEAR OUTFIT ===
-            // 1. Tropical Pink-to-Aqua Iridescent Halter Bikini Top (y: 0.195..0.305)
-            const bTop = ctx.createLinearGradient(w * 0.32, h * 0.19, w * 0.68, h * 0.30);
-            bTop.addColorStop(0, '#ff6ec7');
-            bTop.addColorStop(0.5, '#ff9ad5');
-            bTop.addColorStop(1, '#5ae4ff');
-            ctx.fillStyle = bTop;
-            // Two sleek triangle bikini cups connected by a thin under-band
+            // === CYBER Y2K SUMMER STRING-TIE BIKINI SWIMWEAR ===
+            // 1. Sculpted Tropical Pink-to-Aqua String Halter Bikini Top (rich contrast so it never washes out)
+            const bTop = ctx.createLinearGradient(w * 0.34, h * 0.19, w * 0.66, h * 0.30);
+            bTop.addColorStop(0, '#d82b8e');
+            bTop.addColorStop(0.45, '#ff5eb8');
+            bTop.addColorStop(0.82, '#a66bff');
+            bTop.addColorStop(1, '#36d6ff');
+
+            // Subtle skin shadow directly beneath the bikini cups for 3D depth
+            ctx.fillStyle = skinShadow;
             ctx.beginPath();
-            ctx.moveTo(w * 0.37, h * 0.296);
-            ctx.quadraticCurveTo(w * 0.42, h * 0.195, w * 0.458, h * 0.198);
-            ctx.quadraticCurveTo(w * 0.492, h * 0.255, w * 0.50, h * 0.285);
-            ctx.quadraticCurveTo(w * 0.508, h * 0.255, w * 0.542, h * 0.198);
-            ctx.quadraticCurveTo(w * 0.58, h * 0.195, w * 0.63, h * 0.296);
-            ctx.closePath();
+            ctx.ellipse(w * 0.44, h * 0.300, w * 0.062, h * 0.012, 0, 0, Math.PI * 2);
+            ctx.ellipse(w * 0.56, h * 0.300, w * 0.062, h * 0.012, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Crisp white/pearl bikini trim & thin halter/back strings
+            // Left & right sculpted triangle cups
+            ctx.fillStyle = bTop;
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = Math.max(2, w * 0.003);
-            ctx.stroke();
+            ctx.lineWidth = Math.max(2, w * 0.0026);
+            for (const dir of [-1, 1]) {
+              const cx = w * (0.50 + dir * 0.056);
+              ctx.beginPath();
+              ctx.moveTo(w * (0.50 + dir * 0.008), h * 0.288);
+              ctx.quadraticCurveTo(w * (0.50 + dir * 0.022), h * 0.228, cx, h * 0.196);
+              ctx.quadraticCurveTo(w * (0.50 + dir * 0.105), h * 0.225, w * (0.50 + dir * 0.122), h * 0.292);
+              ctx.quadraticCurveTo(cx, h * 0.304, w * (0.50 + dir * 0.008), h * 0.288);
+              ctx.closePath();
+              ctx.fill();
+              ctx.stroke();
+            }
 
-            // Thin back strap + halter neck ties
+            // Thin crisp under-band & halter neck strings + tiny center tie knot
+            ctx.fillStyle = '#e63a9b';
+            ctx.fillRect(w * 0.24, h * 0.288, w * 0.52, h * 0.0055);
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(w * 0.24, h * 0.282, w * 0.52, h * 0.007);
-            ctx.strokeStyle = '#ff8bcb';
-            ctx.lineWidth = Math.max(3, w * 0.005);
             ctx.beginPath();
-            ctx.moveTo(w * 0.456, h * 0.200);
-            ctx.lineTo(w * 0.476, h * 0.068);
-            ctx.moveTo(w * 0.544, h * 0.200);
-            ctx.lineTo(w * 0.524, h * 0.068);
+            ctx.arc(w * 0.50, h * 0.290, w * 0.006, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#e63a9b';
+            ctx.lineWidth = Math.max(2.5, w * 0.0045);
+            ctx.beginPath();
+            ctx.moveTo(w * 0.444, h * 0.198);
+            ctx.lineTo(w * 0.474, h * 0.068);
+            ctx.moveTo(w * 0.556, h * 0.198);
+            ctx.lineTo(w * 0.526, h * 0.068);
             ctx.stroke();
 
-            // 2. Bare hips + Tropical Pink/Aqua Beach Bikini Bottoms (high-leg V-cut!)
+            // 2. Bare hips + Sleek High-Cut String-Tie Bikini Bottoms (thin hip strings, NO boxy sides!)
             ctx.fillStyle = skinBase;
-            ctx.fillRect(w * 0.24, h * 0.445, w * 0.52, h * 0.165);
+            ctx.fillRect(w * 0.24, h * 0.445, w * 0.52, h * 0.175);
             const hipG = ctx.createLinearGradient(w * 0.24, 0, w * 0.76, 0);
             hipG.addColorStop(0, skinEdge);
-            hipG.addColorStop(0.2, 'rgba(248,231,227,0)');
-            hipG.addColorStop(0.8, 'rgba(248,231,227,0)');
+            hipG.addColorStop(0.22, 'rgba(248,231,227,0)');
+            hipG.addColorStop(0.78, 'rgba(248,231,227,0)');
             hipG.addColorStop(1, skinEdge);
             ctx.fillStyle = hipG;
-            ctx.fillRect(w * 0.24, h * 0.445, w * 0.52, h * 0.165);
+            ctx.fillRect(w * 0.24, h * 0.445, w * 0.52, h * 0.175);
 
-            const bBot = ctx.createLinearGradient(w * 0.30, h * 0.46, w * 0.70, h * 0.58);
-            bBot.addColorStop(0, '#5ae4ff');
-            bBot.addColorStop(0.5, '#ff8bcb');
-            bBot.addColorStop(1, '#ff6ec7');
-            ctx.fillStyle = bBot;
-            // Sleek side-tie bikini bottoms (full coverage bottom + clean side straps)
-            ctx.fillRect(w * 0.24, h * 0.468, w * 0.52, h * 0.018);
+            const bBot = ctx.createLinearGradient(w * 0.40, h * 0.46, w * 0.60, h * 0.60);
+            bBot.addColorStop(0, '#36d6ff');
+            bBot.addColorStop(0.45, '#ff5eb8');
+            bBot.addColorStop(1, '#d82b8e');
+
+            // Thin string waist strap wrapping smoothly around the hips (slightly V-dipped in front)
+            ctx.strokeStyle = '#e63a9b';
+            ctx.lineWidth = Math.max(3, w * 0.0065);
             ctx.beginPath();
-            ctx.moveTo(w * 0.36, h * 0.468);
-            ctx.lineTo(w * 0.64, h * 0.468);
-            ctx.quadraticCurveTo(w * 0.58, h * 0.555, w * 0.54, h * 0.605);
-            ctx.lineTo(w * 0.46, h * 0.605);
-            ctx.quadraticCurveTo(w * 0.42, h * 0.555, w * 0.36, h * 0.468);
+            ctx.moveTo(w * 0.24, h * 0.466);
+            ctx.quadraticCurveTo(w * 0.37, h * 0.460, w * 0.50, h * 0.484);
+            ctx.quadraticCurveTo(w * 0.63, h * 0.460, w * 0.76, h * 0.466);
+            ctx.stroke();
+
+            // Cute tiny string-tie bows on left & right hips
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = Math.max(2, w * 0.003);
+            for (const bx of [w * 0.365, w * 0.635]) {
+              ctx.beginPath();
+              ctx.ellipse(bx - w * 0.008, h * 0.464, w * 0.008, h * 0.004, -0.35, 0, Math.PI * 2);
+              ctx.ellipse(bx + w * 0.008, h * 0.464, w * 0.008, h * 0.004, 0.35, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+
+            // Sleek sculpted high-cut V-front bikini triangle
+            ctx.fillStyle = bBot;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = Math.max(2, w * 0.0024);
+            ctx.beginPath();
+            ctx.moveTo(w * 0.415, h * 0.474);
+            ctx.quadraticCurveTo(w * 0.50, h * 0.492, w * 0.585, h * 0.474);
+            ctx.quadraticCurveTo(w * 0.535, h * 0.548, w * 0.522, h * 0.608);
+            ctx.lineTo(w * 0.478, h * 0.608);
+            ctx.quadraticCurveTo(w * 0.465, h * 0.548, w * 0.415, h * 0.474);
             ctx.closePath();
             ctx.fill();
-            // Back coverage
-            ctx.fillRect(w * 0.24, h * 0.475, w * 0.14, h * 0.12);
-            ctx.fillRect(w * 0.62, h * 0.475, w * 0.14, h * 0.12);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(w * 0.24, h * 0.467, w * 0.52, h * 0.003);
+            ctx.stroke();
+
+            // Sleek minimal string V-back (narrow center back strip so hips stay bare & contoured!)
+            ctx.fillStyle = bBot;
+            ctx.beginPath();
+            ctx.moveTo(w * 0.24, h * 0.466);
+            ctx.lineTo(w * 0.295, h * 0.466);
+            ctx.quadraticCurveTo(w * 0.262, h * 0.538, w * 0.258, h * 0.608);
+            ctx.lineTo(w * 0.24, h * 0.608);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(w * 0.76, h * 0.466);
+            ctx.lineTo(w * 0.705, h * 0.466);
+            ctx.quadraticCurveTo(w * 0.738, h * 0.538, w * 0.742, h * 0.608);
+            ctx.lineTo(w * 0.76, h * 0.608);
+            ctx.closePath();
+            ctx.fill();
 
             // 3. 100% Bare Sun-Kissed Beach Legs (NO stockings!) + cute Aqua/Pink Ankle Bracelet!
             for (let li = 0; li < 2; li++) {
@@ -1217,9 +1265,8 @@ export class CharacterStage {
               lg.addColorStop(1, skinEdge);
               ctx.fillStyle = lg;
               ctx.fillRect(x0, h * 0.485, tw, h * 0.515);
-              // Cute aqua + pearl ankle bracelet on left ankle
               if (li === 0) {
-                ctx.fillStyle = '#5ae4ff';
+                ctx.fillStyle = '#36d6ff';
                 ctx.fillRect(x0, h * 0.925, tw, h * 0.007);
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
