@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>$YUZU Crypto Companion</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="head">
+      <div class="brand">
+        <span class="dot"></span>
+        <b>$YUZU RADAR</b>
+      </div>
+      <span class="tag">LIVE 24H</span>
+    </header>
+
+    <section class="yuzu-card">
+      <div class="yuzu-avatar">Y</div>
+      <div class="yuzu-speech" id="yuzu-speech">Fetching live exchange prices...</div>
+    </section>
+
+    <section class="highlights">
+      <div class="hl up">
+        <span class="micro">TOP GAINER</span>
+        <b id="top-gainer">—</b>
+      </div>
+      <div class="hl down">
+        <span class="micro">TOP LOSER</span>
+        <b id="top-loser">—</b>
+      </div>
+    </section>
+
+    <section class="list" id="coin-list"></section>
+
+    <footer class="actions">
+      <button class="glass-btn pink" id="btn-speak">VOICE BRIEF</button>
+      <button class="glass-btn" id="btn-widget">WIDGET: ON</button>
+      <button class="glass-btn" id="btn-refresh">R</button>
+    </footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

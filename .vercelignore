@@ -1,0 +1,8 @@
+node_modules
+dist
+.vercel
+public/models/yuzuha.usdz
+public/models/alicia.vrm
+public/models/avatar_a.vrm
+public/models/character.vrm
+public/bg-y2k.jpg

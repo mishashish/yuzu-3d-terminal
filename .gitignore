@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.vercel/
+.env
+.env.local
+.DS_Store
+
+# Exclude unused legacy 3D assets from git & Vercel bundle (keeps only active darkness_shibu.vrm & tribals.glb)
+public/models/yuzuha.usdz
+public/models/alicia.vrm
+public/models/avatar_a.vrm
+public/models/character.vrm
+public/bg-y2k.jpg
