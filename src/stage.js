@@ -31,6 +31,7 @@ const envelope = (p) => smooth(Math.min(p / 0.16, (1 - p) / 0.22, 1));
 export const CAMERA_PRESETS = {
   hero: { pos: [0, 1.12, 3.15], target: [0, 0.88, 0] },
   face: { pos: [0.06, 1.42, 1.38], target: [0, 1.36, 0] },
+  mini: { pos: [0, 1.34, 1.52], target: [0, 1.24, 0] },
   outfit: { pos: [-0.42, 0.96, 2.25], target: [0, 0.86, 0] },
   full: { pos: [0.22, 1.08, 3.65], target: [0, 0.84, 0] },
 };

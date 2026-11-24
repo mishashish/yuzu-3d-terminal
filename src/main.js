@@ -9,23 +9,45 @@ const speech = document.getElementById('speech');
 let speechTimer;
 let hud = null;
 
+const isMini = new URLSearchParams(window.location.search).get('mini') === '1';
+if (isMini) document.body.classList.add('mini-mode');
+
 const stage = new CharacterStage(document.getElementById('stage-fixed'), {
   modelUrl: TOKEN.modelUrl,
-  onProgress: (pct) => (loaderText.textContent = `LOADING VRM MODEL… ${pct}%`),
-  onLoaded: () => loader.classList.add('hidden'),
+  onProgress: (pct) => (loaderText.textContent = isMini ? `${pct}%` : `LOADING VRM MODEL… ${pct}%`),
+  onLoaded: () => {
+    loader.classList.add('hidden');
+    if (isMini) stage.setCameraPreset('mini');
+  },
   onError: (e) => {
     console.error(e);
     loaderText.textContent = 'Failed to load model';
   },
   onReaction: (type, text, patCount, affection, bondLevel) => {
-    speech.textContent = text;
-    speech.classList.add('show');
-    clearTimeout(speechTimer);
-    speechTimer = setTimeout(() => speech.classList.remove('show'), 3200);
-    hud?.onPat(patCount, affection, bondLevel, type);
+    if (!isMini) {
+      speech.textContent = text;
+      speech.classList.add('show');
+      clearTimeout(speechTimer);
+      speechTimer = setTimeout(() => speech.classList.remove('show'), 3200);
+      hud?.onPat(patCount, affection, bondLevel, type);
+    }
   },
-  onOrbHit: (hitCount, pos) => hud?.onOrbHit?.(hitCount, pos),
-  onFrame: (state) => hud?.onFrame(state),
+  onOrbHit: (hitCount, pos) => !isMini && hud?.onOrbHit?.(hitCount, pos),
+  onFrame: (state) => !isMini && hud?.onFrame(state),
 });
 
-hud = initUI(stage);
+if (isMini) {
+  // Listen to Chrome Extension popup messages for live 3D lip-sync & poses!
+  window.addEventListener('message', (e) => {
+    const d = e.data;
+    if (!d || typeof d !== 'object') return;
+    if (d.type === 'YUZU_SPEAK') {
+      stage.setSpeaking(!!d.speaking);
+      if (d.speaking && d.pose) stage.react(d.pose);
+    } else if (d.type === 'YUZU_POSE' && d.pose) {
+      stage.react(d.pose);
+    }
+  });
+} else {
+  hud = initUI(stage);
+}

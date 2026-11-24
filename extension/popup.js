@@ -1,5 +1,15 @@
 let lastBrief = '';
+let lastPose = 'peace';
 let isSpeaking = false;
+
+const yuzuFrame = document.getElementById('yuzu-3d-frame');
+const stageWrap = document.getElementById('mini-3d-wrap');
+
+function notify3D(payload) {
+  try {
+    yuzuFrame?.contentWindow?.postMessage(payload, '*');
+  } catch {}
+}
 
 const fmtPrice = (p) => {
   if (p >= 1000) return `$${Math.round(p).toLocaleString('en-US')}`;
@@ -13,9 +23,13 @@ function buildBrief(market) {
   const best = sorted[0];
   const worst = sorted[sorted.length - 1];
   const sol = market.find((m) => m.sym === 'SOL');
+  const leadText =
+    best.pct >= 0
+      ? `Top gainer is ${best.sym} at +${best.pct.toFixed(1)}%`
+      : `Strongest holder is ${best.sym} at ${best.pct.toFixed(1)}%`;
+  lastPose = best.pct > 2 ? 'dance' : worst.pct < -4 ? 'pout' : 'peace';
   return (
-    `Degen market brief! Top gainer is ${best.sym} at ${best.pct >= 0 ? '+' : ''}${best.pct.toFixed(1)}%, ` +
-    `while ${worst.sym} dipped ${worst.pct.toFixed(1)}%. ` +
+    `Degen market brief! ${leadText}, while ${worst.sym} dipped ${worst.pct.toFixed(1)}%. ` +
     `SOL is at ${sol ? fmtPrice(sol.price) : '—'}. ${worst.pct < -4 ? 'Time to buy the dip or wait for bounce?' : 'Market looks active, stay sharp!'}`
   );
 }
@@ -26,6 +40,8 @@ function render(market, source = '', updatedAt = 0) {
   const best = sorted[0];
   const worst = sorted[sorted.length - 1];
 
+  const lblGainer = document.getElementById('lbl-gainer');
+  if (lblGainer) lblGainer.textContent = best.pct >= 0 ? 'TOP GAINER' : 'STRONGEST';
   document.getElementById('top-gainer').textContent = `${best.sym} ${best.pct >= 0 ? '+' : ''}${best.pct.toFixed(1)}%`;
   document.getElementById('top-loser').textContent = `${worst.sym} ${worst.pct.toFixed(1)}%`;
 
@@ -37,6 +53,7 @@ function render(market, source = '', updatedAt = 0) {
 
   lastBrief = buildBrief(market);
   document.getElementById('yuzu-speech').textContent = lastBrief;
+  notify3D({ type: 'YUZU_POSE', pose: lastPose });
 
   const list = document.getElementById('coin-list');
   list.innerHTML = market
@@ -87,11 +104,11 @@ function pickCleanEnglishVoice() {
 }
 
 const btnSpeak = document.getElementById('btn-speak');
-const avatarEl = document.getElementById('yuzu-avatar');
 const setSpeakingUI = (on) => {
   isSpeaking = on;
   if (btnSpeak) btnSpeak.textContent = on ? 'STOP VOICE' : 'VOICE BRIEF';
-  avatarEl?.classList.toggle('speaking', on);
+  stageWrap?.classList.toggle('speaking', on);
+  notify3D({ type: 'YUZU_SPEAK', speaking: on, pose: lastPose });
 };
 
 btnSpeak?.addEventListener('click', () => {
@@ -133,7 +150,6 @@ chrome.storage.local.get(['widgetEnabled', 'alertsEnabled', 'market', 'source', 
     btnAlerts.textContent = aOn ? 'ALERTS: ON' : 'ALERTS: OFF';
     btnAlerts.classList.toggle('off', !aOn);
   }
-  // Show cached data immediately so popup feels instant, then refresh in background
   if (st.market?.length) render(st.market, st.source, st.updatedAt);
   requestRefresh();
 });

@@ -17,14 +17,23 @@
       </div>
     </header>
 
-    <section class="yuzu-card">
-      <div class="yuzu-avatar" id="yuzu-avatar">Y</div>
+    <!-- Live Mini 3D Yuzu Stage + Speech Bubble -->
+    <section class="mini-stage-card">
+      <div class="mini-3d-wrap" id="mini-3d-wrap">
+        <iframe
+          id="yuzu-3d-frame"
+          src="https://yuzuha-simulator.vercel.app/?mini=1"
+          allow="autoplay"
+          loading="eager"
+          title="Yuzu 3D Companion"
+        ></iframe>
+      </div>
       <div class="yuzu-speech" id="yuzu-speech">Fetching live exchange prices...</div>
     </section>
 
     <section class="highlights">
       <div class="hl up">
-        <span class="micro">TOP GAINER</span>
+        <span class="micro" id="lbl-gainer">TOP GAINER</span>
         <b id="top-gainer">—</b>
       </div>
       <div class="hl down">

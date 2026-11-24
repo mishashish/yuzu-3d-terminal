@@ -1,17 +1,17 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  width: 350px;
+  width: 360px;
   background: radial-gradient(circle at 20% 0%, #231733 0%, #0b0912 65%, #07070c 100%);
   color: #ffffff;
   font-family: 'Segoe UI', system-ui, monospace;
-  padding: 14px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
 }
 .head {
   display: flex; justify-content: space-between; align-items: center;
-  padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.12);
+  padding-bottom: 7px; border-bottom: 1px solid rgba(255,255,255,0.12);
 }
 .brand { display: flex; align-items: center; gap: 7px; font-size: 13px; letter-spacing: 0.08em; }
 .head-right { display: flex; align-items: center; gap: 8px; }
@@ -23,35 +23,36 @@ body {
 }
 .ext-link:hover { background: rgba(255,139,203,0.16); color: #fff; }
 
-.yuzu-card {
-  display: flex; gap: 10px; align-items: flex-start;
-  padding: 10px; border-radius: 12px;
-  background: linear-gradient(145deg, rgba(255,139,203,0.14), rgba(21,19,28,0.8));
+/* Mini 3D Yuzu Stage Card */
+.mini-stage-card {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 8px; border-radius: 13px;
+  background: linear-gradient(145deg, rgba(255,139,203,0.12), rgba(21,19,28,0.86));
   border: 1px solid rgba(255,139,203,0.38);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.32), 0 10px 26px rgba(0,0,0,0.55);
 }
-.yuzu-avatar {
-  flex: none; width: 34px; height: 34px; border-radius: 50%;
-  background: linear-gradient(135deg, #ff8bcb, #a66bff, #72e7ff);
-  color: #08080c; font-weight: 800; font-size: 15px;
-  display: grid; place-items: center;
-  box-shadow: 0 0 14px rgba(255,139,203,0.5);
-  transition: transform 0.2s;
+.mini-3d-wrap {
+  position: relative; width: 100%; height: 175px; border-radius: 9px; overflow: hidden;
+  background: radial-gradient(circle at 50% 45%, #1d152e 0%, #090710 100%);
+  border: 1px solid rgba(255,255,255,0.14);
 }
-.yuzu-avatar.speaking {
-  animation: pulseTalk 0.6s ease-in-out infinite;
+.mini-3d-wrap.speaking {
+  border-color: rgba(114,231,255,0.75);
+  box-shadow: 0 0 18px rgba(114,231,255,0.35), 0 0 18px rgba(255,139,203,0.28);
 }
-@keyframes pulseTalk {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 14px rgba(255,139,203,0.5); }
-  50% { transform: scale(1.1); box-shadow: 0 0 22px rgba(114,231,255,0.85); }
+.mini-3d-wrap iframe {
+  width: 100%; height: 100%; border: 0; display: block;
 }
-.yuzu-speech { font-size: 11px; line-height: 1.45; color: #f3f1fa; }
+.yuzu-speech {
+  font-size: 11px; line-height: 1.42; color: #f3f1fa;
+  padding: 2px 4px;
+}
 
 .highlights { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .hl {
-  padding: 8px 10px; border-radius: 10px;
+  padding: 7px 10px; border-radius: 10px;
   background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14);
-  display: flex; flex-direction: column; gap: 3px;
+  display: flex; flex-direction: column; gap: 2px;
 }
 .hl.up { border-color: rgba(184,255,101,0.4); }
 .hl.down { border-color: rgba(255,139,203,0.45); }
@@ -59,10 +60,10 @@ body {
 .hl.up b { color: #b8ff65; font-size: 12px; }
 .hl.down b { color: #ff8bcb; font-size: 12px; }
 
-.list { display: flex; flex-direction: column; gap: 5px; }
+.list { display: flex; flex-direction: column; gap: 4px; }
 .row {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 6px 9px; border-radius: 8px; text-decoration: none;
+  padding: 5px 9px; border-radius: 8px; text-decoration: none;
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
   font-size: 11px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
 }
