@@ -540,15 +540,14 @@ export function initUI(stage) {
       </ul>`,
     extension: `
       <h3>CHROME EXTENSION // CRYPTO COMPANION (v1.1.0)</h3>
-      <p>Install Yuzu directly into Google Chrome, Brave, or Edge to track <b>SOL, BTC, ETH, WIF, BONK, PEPE, JUP</b> 24h pumps &amp; dumps with voice briefs, desktop alerts, and a draggable floating widget.</p>
-      <div style="margin:8px 0 12px">
-        <a class="gloss-btn gloss-pink" href="/yuzu-chrome-extension.zip" download="yuzu-chrome-extension.zip" style="width:100%;text-align:center">DOWNLOAD CHROME EXTENSION (.ZIP)</a>
+      <p>Install Yuzu directly into Chrome, Brave, or Edge to track <b>SOL, BTC, ETH, WIF, BONK, PEPE, JUP</b> 24h pumps &amp; dumps with voice briefs, desktop alerts, and a draggable floating widget.</p>
+      <div class="btn-row" style="margin:8px 0 12px">
+        <a class="gloss-btn gloss-pink" href="/yuzu-chrome-extension.crx" download="yuzu-chrome-extension.crx">DOWNLOAD .CRX (1 FILE)</a>
+        <a class="gloss-btn" href="/yuzu-chrome-extension.zip" download="yuzu-chrome-extension.zip">DOWNLOAD .ZIP (FOLDER)</a>
       </div>
       <ul>
-        <li><b>Step 1:</b> Click <b>DOWNLOAD CHROME EXTENSION (.ZIP)</b> above and unzip the folder.</li>
-        <li><b>Step 2:</b> Open <code>chrome://extensions/</code> in Chrome, Brave, or Edge.</li>
-        <li><b>Step 3:</b> Turn on <b>Developer mode</b> (top-right toggle).</li>
-        <li><b>Step 4:</b> Click <b>Load unpacked</b> and select the unzipped folder.</li>
+        <li><b>Fastest (1 File .CRX):</b> Open <code>chrome://extensions/</code>, turn on <b>Developer mode</b> (top-right), and <b>drag &amp; drop</b> <code>yuzu-chrome-extension.crx</code> directly onto the page.</li>
+        <li><b>Alternative (.ZIP Folder):</b> Unzip <code>yuzu-chrome-extension.zip</code> → click <b>Load unpacked</b> → select the <code>yuzu-extension</code> folder.</li>
       </ul>
       <p>Pin <b>$YUZU RADAR</b> to your browser toolbar for live SOL badge updates, TradingView links, and voice market briefs.</p>`,
     overview: `
