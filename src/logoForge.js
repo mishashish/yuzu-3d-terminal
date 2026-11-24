@@ -247,15 +247,15 @@ export function renderY2KLogo(canvas, opts = {}) {
   ctx.strokeStyle = mat.rim;
   ctx.strokeText(cleanText, cx, cy);
 
-  // Glassy upper specular reflection strip inside text
+  // Glassy upper specular reflection clipped strictly to the text glyphs (zero background bar artifact!)
   if (mat.glass) {
     ctx.save();
-    ctx.globalCompositeOperation = 'source-atop';
-    const sg = ctx.createLinearGradient(0, cy - fontSize * 0.5, 0, cy);
-    sg.addColorStop(0, 'rgba(255,255,255,0.65)');
+    const sg = ctx.createLinearGradient(0, cy - fontSize * 0.48, 0, cy + fontSize * 0.05);
+    sg.addColorStop(0, 'rgba(255,255,255,0.62)');
+    sg.addColorStop(0.55, 'rgba(255,255,255,0.12)');
     sg.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = sg;
-    ctx.fillRect(0, cy - fontSize * 0.6, s, fontSize * 0.55);
+    ctx.fillText(cleanText, cx, cy);
     ctx.restore();
   }
   ctx.restore();

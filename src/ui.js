@@ -49,8 +49,8 @@ export function initUI(stage) {
   $$('[data-tax]').forEach((el) => (el.textContent = `${TOKEN.buyTax}% / ${TOKEN.sellTax}%`));
   document.title = `$${TOKEN.ticker} — ${TOKEN.tagline}`;
   $('#ca-value').textContent = hasCA() ? TOKEN.contractAddress : 'Launching soon — set CA in config.js';
-  $('#link-twitter').href = TOKEN.links.twitter;
-  $('#link-telegram').href = TOKEN.links.telegram;
+  if ($('#link-twitter')) $('#link-twitter').href = TOKEN.links.twitter;
+  if ($('#link-telegram')) $('#link-telegram').href = TOKEN.links.telegram;
 
   // Header charm load segments
   const loadSegs = [];
