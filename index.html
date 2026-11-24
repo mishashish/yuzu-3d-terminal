@@ -46,6 +46,7 @@
         <a href="#band-3" class="nav-link" data-band="2">003 / TOKEN</a>
         <a href="#band-4" class="nav-link" data-band="3">004 / SIGNAL</a>
         <button class="nav-link nav-docs-btn" id="btn-tour">GUIDE TOUR</button>
+        <button class="nav-link nav-docs-btn" id="btn-open-mod">MOD STUDIO</button>
         <button class="nav-link nav-docs-btn" id="btn-open-forge">LOGO FORGE</button>
         <button class="nav-link nav-docs-btn" id="btn-open-ext">CHROME EXT</button>
         <button class="nav-link nav-docs-btn" id="btn-open-docs">DOCS ↗</button>
@@ -370,7 +371,7 @@
 
     <!-- EDITORIAL BOTTOM BAR -->
     <footer class="hud-bottom">
-      <span class="bottom-hints">[P] PET · [C] CHAT · [S] SKELETON · [T] TOUR · [L] LOGO</span>
+      <span class="bottom-hints">[P] PET · [C] CHAT · [M] MOD · [S] SKELETON · [T] TOUR · [L] LOGO</span>
       <span>$<span data-ticker>YUZU</span>® ALL RIGHTS RESERVED</span>
     </footer>
 
@@ -447,6 +448,81 @@
             <div class="btn-row" style="margin-top:auto">
               <button class="gloss-btn gloss-pink" id="btn-forge-3d">PLACE IN 3D</button>
               <button class="gloss-btn" id="btn-forge-dl">DOWNLOAD PNG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMMUNITY 3D MOD STUDIO MODAL (DOWNLOAD BASE VRM/UV -> CUSTOMIZE -> UPLOAD LIVE) -->
+    <div class="docs-overlay" id="mod-overlay" aria-hidden="true">
+      <div class="docs-modal mod-modal">
+        <div class="docs-head">
+          <div>
+            <span class="acid-text">CREATOR SANDBOX // DOWNLOAD · REMIX · UPLOAD LIVE</span>
+            <h2>$YUZU 3D MOD STUDIO</h2>
+          </div>
+          <button class="gloss-key" id="btn-close-mod">ESC [X]</button>
+        </div>
+        <div class="mod-grid">
+          <div class="mod-col">
+            <div class="mod-step">
+              <span class="acid-text">01 // DOWNLOAD BASE KIT</span>
+              <p class="mod-hint">Grab the base 3D <code>.VRM</code> for VRoid Studio / Blender, or export the live UV texture PNG to paint outfits, tattoos &amp; logos in Photoshop, Procreate, or Canva.</p>
+              <div class="key-grid">
+                <button type="button" class="gloss-key" id="btn-mod-dl-vrm">DOWNLOAD .VRM</button>
+                <button type="button" class="gloss-key" id="btn-mod-dl-skin">SKIN / OUTFIT PNG</button>
+                <button type="button" class="gloss-key" id="btn-mod-dl-hair">HAIR UV PNG</button>
+              </div>
+            </div>
+
+            <div class="mod-step">
+              <span class="acid-text">02 // UPLOAD YOUR CUSTOM MOD</span>
+              <div class="key-grid" id="mod-slot-chips" style="margin:4px 0 6px">
+                <button type="button" class="gloss-key active" data-slot="skin">SLOT: SKIN / OUTFIT</button>
+                <button type="button" class="gloss-key" data-slot="hair">SLOT: HAIR</button>
+                <button type="button" class="gloss-key" data-slot="dress">SLOT: DRESS</button>
+              </div>
+              <div class="mod-dropzone" id="mod-dropzone">
+                <input type="file" id="mod-file-input" accept=".vrm,.glb,.png,.jpg,.jpeg,.webp" hidden />
+                <b>DROP .VRM MODEL OR .PNG TEXTURE HERE</b>
+                <span>or click to browse · applies live onto 3D Yuzu with full IK &amp; dance</span>
+              </div>
+            </div>
+
+            <div class="mod-step">
+              <span class="acid-text">OR QUICK-REMIX LIVE IN BROWSER</span>
+              <div class="mod-sliders">
+                <label class="mod-slider-row">
+                  <span>HAIR HUE <b id="mod-hair-hue-val">0°</b></span>
+                  <input type="range" id="mod-hair-hue" min="0" max="360" value="0" />
+                </label>
+                <label class="mod-slider-row">
+                  <span>OUTFIT HUE <b id="mod-outfit-hue-val">0°</b></span>
+                  <input type="range" id="mod-outfit-hue" min="0" max="360" value="0" />
+                </label>
+              </div>
+              <button type="button" class="gloss-key" id="btn-mod-reset" style="margin-top:6px">RESET TO DEFAULT YUZU</button>
+            </div>
+          </div>
+
+          <div class="mod-col">
+            <div class="mod-step">
+              <span class="acid-text">03 // PUBLISH TO GALLERY</span>
+              <div class="mod-inputs">
+                <input id="mod-name" type="text" placeholder="MOD NAME (E.G. CYBER ANGEL)" maxlength="24" autocomplete="off" />
+                <input id="mod-creator" type="text" placeholder="@YOUR_HANDLE" maxlength="20" autocomplete="off" />
+              </div>
+              <div class="btn-row" style="margin-top:8px">
+                <button type="button" class="gloss-btn gloss-pink" id="btn-mod-publish">PUBLISH MOD</button>
+                <button type="button" class="gloss-btn" id="btn-mod-share">SHARE ON X ↗</button>
+              </div>
+              <div class="mod-status" id="mod-status">READY // DOWNLOAD, REMIX, OR DROP A FILE</div>
+            </div>
+
+            <div class="mod-step" style="flex:1;min-height:0;display:flex;flex-direction:column">
+              <span class="acid-text">COMMUNITY MODS // CLICK WEAR</span>
+              <div class="mod-gallery" id="mod-gallery"></div>
             </div>
           </div>
         </div>

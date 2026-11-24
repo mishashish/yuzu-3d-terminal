@@ -2,6 +2,7 @@ import { TOKEN } from './config.js';
 import { FreeAIChat } from './aiChat.js';
 import { renderY2KLogo } from './logoForge.js';
 import { yuzuWallet } from './walletconnect.js';
+import { initModStudio } from './modStudio.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -605,10 +606,18 @@ export function initUI(stage) {
   docsOverlay?.addEventListener('click', (e) => {
     if (e.target === docsOverlay) docsOverlay.classList.remove('open');
   });
+  // Community 3D Mod Studio (download base VRM/UV -> remix -> upload live)
+  const modStudio = initModStudio(stage, toast, ai);
+
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       docsOverlay?.classList.remove('open');
       forgeOverlay?.classList.remove('open');
+      modStudio.close();
+    }
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key.toLowerCase() === 'm') {
+      modStudio.open();
     }
   });
   $$('#docs-tabs .gloss-key').forEach((btn) => {

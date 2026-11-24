@@ -1533,6 +1533,165 @@ export class CharacterStage {
     });
   }
 
+  // === MOD STUDIO: Export UV Textures, Apply Custom PNG Textures, Live Hue Remix & Snapshots ===
+  _findSlotMaterials(slot = 'skin') {
+    if (!this.vrm) return [];
+    const rx =
+      slot === 'hair'
+        ? /Hair/i
+        : slot === 'dress'
+          ? /Tops_01_CLOTH|Cloth/i
+          : /Body_00_SKIN/i;
+    const out = [];
+    this.vrm.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const mat of mats) {
+        if (!mat || !mat.map || !mat.map.image) continue;
+        if (rx.test(mat.name || '') || (slot === 'hair' && /hair/i.test(o.name || ''))) {
+          if (!mat.userData._origMap) {
+            mat.userData._origMap = mat.map;
+            mat.userData._origShade = mat.shadeMultiplyTexture || null;
+            mat.userData._origNormal = mat.normalMap || null;
+          }
+          out.push(mat);
+        }
+      }
+    });
+    return out;
+  }
+
+  exportTexturePNG(slot = 'skin') {
+    const mats = this._findSlotMaterials(slot);
+    if (!mats.length) return null;
+    const tex = slot === 'skin' ? mats[0].map : (mats[0].userData._origMap || mats[0].map);
+    const img = tex?.image;
+    if (!img) return null;
+    const w = img.naturalWidth || img.width || 1024;
+    const h = img.naturalHeight || img.height || 1024;
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    return c.toDataURL('image/png');
+  }
+
+  applyCustomTexture(slot = 'skin', imageUrl) {
+    return new Promise((resolve, reject) => {
+      const mats = this._findSlotMaterials(slot);
+      if (!mats.length) return reject(new Error(`No ${slot} material found on current model`));
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        for (const mat of mats) {
+          const orig = mat.userData._origMap || mat.map;
+          const tex = new THREE.Texture(img);
+          tex.flipY = orig.flipY;
+          tex.colorSpace = orig.colorSpace;
+          tex.wrapS = orig.wrapS;
+          tex.wrapT = orig.wrapT;
+          tex.needsUpdate = true;
+          mat.map = tex;
+          if ('shadeMultiplyTexture' in mat && mat.userData._origShade) {
+            mat.shadeMultiplyTexture = tex;
+          }
+          if (slot === 'skin' && 'normalMap' in mat) mat.normalMap = null;
+          mat.needsUpdate = true;
+        }
+        // Hide outer dress mesh when applying a custom painted skin/outfit UV so it's 100% visible
+        if (slot === 'skin' && this.vrm) {
+          this.vrm.scene.traverse((o) => {
+            if (!o.isMesh) return;
+            const ms = Array.isArray(o.material) ? o.material : [o.material];
+            for (const m of ms) {
+              if (m && /Tops_01_CLOTH/i.test(m.name || '')) {
+                m.visible = false;
+                m.needsUpdate = true;
+              }
+            }
+          });
+        } else if (slot === 'dress' && this.vrm) {
+          this.vrm.scene.traverse((o) => {
+            if (!o.isMesh) return;
+            const ms = Array.isArray(o.material) ? o.material : [o.material];
+            for (const m of ms) {
+              if (m && /Tops_01_CLOTH/i.test(m.name || '')) {
+                m.visible = true;
+                m.needsUpdate = true;
+              }
+            }
+          });
+        }
+        resolve(true);
+      };
+      img.onerror = () => reject(new Error('Failed to load image texture'));
+      img.src = imageUrl;
+    });
+  }
+
+  applyRemixHue({ hairHue = 0, outfitHue = 0 } = {}) {
+    if (!this.vrm) return;
+    const applyHueToSlot = (slot, deg) => {
+      const mats = this._findSlotMaterials(slot);
+      for (const mat of mats) {
+        const orig = mat.userData._origMap;
+        if (!orig?.image) continue;
+        if (Math.abs(deg) < 1) {
+          mat.map = orig;
+          if ('shadeMultiplyTexture' in mat) mat.shadeMultiplyTexture = mat.userData._origShade;
+          mat.needsUpdate = true;
+          continue;
+        }
+        const img = orig.image;
+        const w = Math.min(1024, img.naturalWidth || img.width || 512);
+        const h = Math.min(1024, img.naturalHeight || img.height || 512);
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.filter = `hue-rotate(${deg}deg) saturate(1.18)`;
+        ctx.drawImage(img, 0, 0, w, h);
+        const tex = new THREE.CanvasTexture(c);
+        tex.flipY = orig.flipY;
+        tex.colorSpace = orig.colorSpace;
+        tex.wrapS = orig.wrapS;
+        tex.wrapT = orig.wrapT;
+        tex.needsUpdate = true;
+        mat.map = tex;
+        if ('shadeMultiplyTexture' in mat && mat.userData._origShade) {
+          mat.shadeMultiplyTexture = tex;
+        }
+        mat.needsUpdate = true;
+      }
+    };
+    applyHueToSlot('hair', hairHue);
+    applyHueToSlot('dress', outfitHue);
+  }
+
+  captureThumbnail() {
+    try {
+      this.renderer.render(this.scene, this.camera);
+      const src = this.renderer.domElement;
+      const size = Math.min(src.width, src.height);
+      const sx = Math.round((src.width - size) / 2);
+      const sy = Math.round((src.height - size) * 0.28);
+      const c = document.createElement('canvas');
+      c.width = 240;
+      c.height = 240;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(src, sx, Math.max(0, sy), size, size, 0, 0, 240, 240);
+      return c.toDataURL('image/jpeg', 0.82);
+    } catch {
+      return '';
+    }
+  }
+
+  resetCustomModel() {
+    this.outfitMode = 'full';
+    this.load('/models/darkness_shibu.vrm');
+  }
+
   setScrollProgress(p01) {
     this.scrollProgress = clamp(p01, 0, 1);
     this.cameraOverride = null;
