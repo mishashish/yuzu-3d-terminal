@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy — $YUZU Crypto Companion</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        min-height: 100vh;
+        background: radial-gradient(circle at 30% 0%, #1d152e 0%, #08080c 60%);
+        color: #f3f1fa;
+        font-family: system-ui, -apple-system, 'Segoe UI', monospace;
+        padding: 48px 20px;
+        line-height: 1.65;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        background: rgba(21, 19, 28, 0.78);
+        border: 1px solid rgba(255, 139, 203, 0.35);
+        border-radius: 16px;
+        padding: 32px 28px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65);
+      }
+      .tag { color: #b8ff65; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
+      h1 { font-size: 26px; margin: 6px 0 18px; color: #ffffff; }
+      h2 { font-size: 15px; margin: 22px 0 8px; color: #ff8bcb; text-transform: uppercase; letter-spacing: 0.08em; }
+      p, li { font-size: 13.5px; color: #d9d9e8; }
+      ul { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+      a { color: #72e7ff; }
+      .foot { margin-top: 28px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.12); font-size: 12px; color: rgba(217,217,232,0.6); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="tag">$YUZU CRYPTO COMPANION // CHROME EXTENSION</div>
+      <h1>Privacy Policy</h1>
+      <p>Effective Date: November 24, 2026</p>
+
+      <h2>1. Data Collection</h2>
+      <p><b>$YUZU Crypto Companion</b> does <b>not</b> collect, store, sell, or transmit any personally identifiable information (PII), browsing history, wallet private keys, or user analytics.</p>
+
+      <h2>2. Local Storage</h2>
+      <p>The extension uses Chrome's local storage (<code>chrome.storage.local</code>) exclusively on your device to save:</p>
+      <ul>
+        <li>Your widget visibility preference (<code>widgetEnabled</code>).</li>
+        <li>Your price movement alert toggle (<code>alertsEnabled</code>) and alert cooldown timestamp.</li>
+        <li>Cached public cryptocurrency prices (SOL, BTC, ETH, WIF, BONK, PEPE, JUP) for fast popup display.</li>
+      </ul>
+
+      <h2>3. Network Requests</h2>
+      <p>To display live 24-hour market data and render the embedded 3D companion inside the popup, the extension connects only to:</p>
+      <ul>
+        <li>Public market price APIs: <code>okx.com</code>, <code>api.binance.com</code>, and <code>api.coingecko.com</code>.</li>
+        <li>The official 3D mini-stage hosted at <code>https://yuzuha-simulator.vercel.app/?mini=1</code>.</li>
+      </ul>
+      <p>No authentication tokens, cookies, or personal user data are sent to any third-party service.</p>
+
+      <h2>4. Permissions Justification</h2>
+      <ul>
+        <li><b>storage:</b> Saves user widget/alert settings and cached market data locally.</li>
+        <li><b>alarms:</b> Periodically refreshes public crypto prices every 2 minutes in the background.</li>
+        <li><b>notifications:</b> Sends optional desktop alerts when a tracked coin moves by 5% or more in 24 hours.</li>
+      </ul>
+
+      <h2>5. Contact</h2>
+      <p>For questions about this Privacy Policy, open an issue on our official repository: <a href="https://github.com/mishashish/yuzu-3d-terminal" target="_blank" rel="noopener">github.com/mishashish/yuzu-3d-terminal</a>.</p>
+
+      <div class="foot">
+        <a href="/">← Back to $YUZU 3D Terminal</a>
+      </div>
+    </main>
+  </body>
+</html>
