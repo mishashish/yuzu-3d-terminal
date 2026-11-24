@@ -58,8 +58,7 @@ a { color: inherit; text-decoration: none; }
 }
 .stage-loader.hidden { opacity: 0; pointer-events: none; }
 .loader-logo {
-  width: 170px; height: auto; border-radius: 14px;
-  mix-blend-mode: lighten;
+  width: 210px; height: auto;
   filter: drop-shadow(0 0 22px rgba(114, 231, 255, 0.35));
 }
 .loader-ring {
@@ -88,23 +87,18 @@ a { color: inherit; text-decoration: none; }
   background: rgba(8, 8, 12, 0.78); backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
-.brand { display: flex; align-items: center; gap: 11px; }
+.brand { display: flex; align-items: center; gap: 10px; }
 .brand-logo {
-  width: 30px; height: 30px; border-radius: 8px; object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 0 12px rgba(255, 139, 203, 0.35);
+  height: 28px; width: auto; object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(255, 139, 203, 0.45));
 }
 .hero-logo-wrap {
-  margin: 4px 0 8px;
-  border-radius: 12px;
-  overflow: hidden;
+  margin: 6px 0 8px;
   display: flex; align-items: center; justify-content: center;
 }
 .hero-logo {
-  width: 100%; max-width: 245px; height: auto; display: block;
-  margin: -20px 0 -16px;
-  mix-blend-mode: lighten;
-  filter: drop-shadow(0 0 16px rgba(114, 231, 255, 0.28));
+  width: 100%; max-width: 260px; height: auto; display: block;
+  filter: drop-shadow(0 4px 18px rgba(114, 231, 255, 0.28));
 }
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
