@@ -201,17 +201,19 @@ export class CharacterStage {
   }
 
   _initRenderer() {
-    this.renderer = new THREE.WebGLRenderer({ antialias: !this.isMini, alpha: true, powerPreference: this.isMini ? 'default' : 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMini ? 1.25 : 2));
+    this.renderer = new THREE.WebGLRenderer({ antialias: !this.isMini, alpha: true, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMini ? 1.25 : 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.container.appendChild(this.renderer.domElement);
     window.addEventListener('resize', () => this._resize());
+    this._lowFpsStreak = 0;
+    this._frameParity = 0;
   }
 
   _resize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMini ? 1.25 : (w < 768 ? 1.5 : 2)));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMini ? 1.25 : (w < 768 ? 1.25 : 1.5)));
     this.renderer.setSize(w, h, false);
     if (this.camera) {
       this.camera.aspect = w / h;
@@ -272,48 +274,35 @@ export class CharacterStage {
     this.lookTarget = new THREE.Object3D();
     this.scene.add(this.lookTarget);
 
-    // Real 3D Cyber Y2K Sculptural Background anchored in world space (NOT a 2D image, stays fixed in 3D space!)
+    // Fast GPU-friendly liquid chrome & glossy glass materials (MeshStandardMaterial compiles 3x faster than Physical+Iridescence!)
     this.artObjects = [];
-    const chromeMat = new THREE.MeshPhysicalMaterial({
-      color: 0xd9d9e8,
+    const chromeMat = new THREE.MeshStandardMaterial({
+      color: 0xe6e6f5,
       metalness: 0.96,
-      roughness: 0.07,
-      iridescence: 1.0,
-      iridescenceIOR: 1.38,
-      iridescenceThicknessRange: [180, 560],
-      clearcoat: 1.0,
+      roughness: 0.10,
+      envMapIntensity: 1.35,
     });
-    const darkChromeMat = new THREE.MeshPhysicalMaterial({
-      color: 0x3a344c,
-      metalness: 0.94,
-      roughness: 0.14,
-      iridescence: 0.9,
-      iridescenceIOR: 1.4,
-      iridescenceThicknessRange: [220, 620],
-      clearcoat: 1.0,
+    const darkChromeMat = new THREE.MeshStandardMaterial({
+      color: 0x453e5c,
+      metalness: 0.92,
+      roughness: 0.16,
+      envMapIntensity: 1.25,
     });
-    // Fast glossy glass materials (iridescence + clearcoat + env reflections WITHOUT expensive multi-pass transmission!)
-    const pinkGlassMat = new THREE.MeshPhysicalMaterial({
+    const pinkGlassMat = new THREE.MeshStandardMaterial({
       color: 0xff8bcb,
-      metalness: 0.22,
-      roughness: 0.05,
+      metalness: 0.35,
+      roughness: 0.08,
       transparent: true,
-      opacity: 0.72,
-      iridescence: 1.0,
-      iridescenceIOR: 1.42,
-      clearcoat: 1.0,
-      envMapIntensity: 1.7,
+      opacity: 0.74,
+      envMapIntensity: 1.6,
     });
-    const cyanGlassMat = new THREE.MeshPhysicalMaterial({
+    const cyanGlassMat = new THREE.MeshStandardMaterial({
       color: 0x72e7ff,
-      metalness: 0.22,
-      roughness: 0.06,
+      metalness: 0.35,
+      roughness: 0.08,
       transparent: true,
-      opacity: 0.72,
-      iridescence: 0.95,
-      iridescenceIOR: 1.40,
-      clearcoat: 1.0,
-      envMapIntensity: 1.7,
+      opacity: 0.74,
+      envMapIntensity: 1.6,
     });
 
     // 1. FULL 360° CYBER Y2K 3D ENVIRONMENT INSTALLATION (skipped in ultra-fast Chrome Extension ?mini=1 mode!)
@@ -329,26 +318,21 @@ export class CharacterStage {
     grid.material.opacity = 0.42;
     installGroup.add(grid);
 
-    const ribbonMat = new THREE.MeshPhysicalMaterial({
+    const ribbonMat = new THREE.MeshStandardMaterial({
       color: 0xe6e0ff,
-      metalness: 0.76,
-      roughness: 0.08,
+      metalness: 0.80,
+      roughness: 0.12,
       transparent: true,
       opacity: 0.84,
-      iridescence: 1.0,
-      iridescenceIOR: 1.45,
-      iridescenceThicknessRange: [220, 680],
-      clearcoat: 1.0,
+      envMapIntensity: 1.45,
     });
-    const violetGlassMat = new THREE.MeshPhysicalMaterial({
+    const violetGlassMat = new THREE.MeshStandardMaterial({
       color: 0xa66bff,
-      metalness: 0.24,
-      roughness: 0.05,
+      metalness: 0.35,
+      roughness: 0.08,
       transparent: true,
-      opacity: 0.70,
-      iridescence: 1.0,
-      clearcoat: 1.0,
-      envMapIntensity: 1.6,
+      opacity: 0.72,
+      envMapIntensity: 1.5,
     });
 
     // A. 360° Flowing Iridescent Liquid-Glass Ribbons (6 sculptural waves encircling the entire 360° dome)
@@ -2251,7 +2235,18 @@ export class CharacterStage {
       this.fps = Math.round((this.fpsFrames * 1000) / (now - this.fpsLast));
       this.fpsFrames = 0;
       this.fpsLast = now;
+      // Adaptive GPU resolution scaling: if FPS dips under 36 on integrated GPUs, smoothly drop pixelRatio to 1.0
+      if (this.fps < 36 && this.renderer.getPixelRatio() > 1.05) {
+        this._lowFpsStreak = (this._lowFpsStreak || 0) + 1;
+        if (this._lowFpsStreak >= 4) {
+          this.renderer.setPixelRatio(1);
+          this._lowFpsStreak = 0;
+        }
+      } else {
+        this._lowFpsStreak = 0;
+      }
     }
+    this._frameParity = (this._frameParity || 0) ^ 1;
 
     this.waveEnergy = Math.max(0, this.waveEnergy - dt * 1.2);
     this.excitement = Math.max(0, this.excitement - dt * 0.22);
@@ -2317,7 +2312,7 @@ export class CharacterStage {
     }
 
     this.sparks.visible = this.params.sparkles > 0.02;
-    if (this.sparks.visible) {
+    if (this.sparks.visible && this._frameParity === 0) {
       this.sparks.material.opacity = 0.25 + this.params.sparkles * 0.75;
       const pos = this.sparks.geometry.attributes.position;
       const spBoost = 0.6 + this.params.sparkles * 0.8 + this.excitement * 0.7;

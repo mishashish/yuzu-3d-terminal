@@ -887,32 +887,50 @@ export function initUI(stage) {
   // Restore previous Reown AppKit session silently
   setTimeout(() => yuzuWallet.restore(), 900);
 
-  // Live ECG Heartbeat waveform & HUD frame updater
+  // Live ECG Heartbeat waveform & HUD frame updater (throttled to prevent 60fps DOM thrashing!)
   const samples = new Array(44).fill(26);
   let lastWaveT = 0;
+  let lastHudT = 0;
+  let lastFilledSegs = -1;
 
   return {
     onFrame(s) {
-      // BPM & Charm Load
-      const bpm = Math.round(s.bpm);
-      $('#bpm-val').textContent = bpm;
-      $('#pulse-hz').textContent = `${(bpm / 60).toFixed(1)} HZ`;
-
-      const loadPct = Math.min(100, Math.round(58 + s.excitement * 36 + s.hover * 12));
-      $('#charm-load-pct').textContent = `${loadPct}%`;
-      const filled = Math.round((loadPct / 100) * loadSegs.length);
-      loadSegs.forEach((seg, i) => {
-        seg.className = i < filled ? (i >= 15 ? 'load-seg on hot' : 'load-seg on') : 'load-seg';
-      });
-
-      // Live ECG Heartbeat pulse waveform
       const now = performance.now();
-      if (now - lastWaveT > 48) {
+
+      // Throttle numeric HUD & 20-segment bar updates to ~10 Hz (cuts 1,200 DOM writes/sec -> ~20/sec!)
+      if (now - lastHudT > 100) {
+        lastHudT = now;
+        const bpm = Math.round(s.bpm);
+        $('#bpm-val').textContent = bpm;
+        $('#pulse-hz').textContent = `${(bpm / 60).toFixed(1)} HZ`;
+
+        const loadPct = Math.min(100, Math.round(58 + s.excitement * 36 + s.hover * 12));
+        $('#charm-load-pct').textContent = `${loadPct}%`;
+        const filled = Math.round((loadPct / 100) * loadSegs.length);
+        if (filled !== lastFilledSegs) {
+          lastFilledSegs = filled;
+          loadSegs.forEach((seg, i) => {
+            seg.className = i < filled ? (i >= 15 ? 'load-seg on hot' : 'load-seg on') : 'load-seg';
+          });
+        }
+
+        // Orientation Dial (Card 05)
+        $('#cam-dist').textContent = `${s.dist.toFixed(2)} M`;
+        $('#cam-yaw').textContent = `${s.yawDeg >= 0 ? '+' : ''}${s.yawDeg.toFixed(1)}°`;
+        $('#cam-pitch').textContent = `${s.pitchDeg >= 0 ? '+' : ''}${s.pitchDeg.toFixed(1)}°`;
+        $('#cam-fps').textContent = `${s.fps}`;
+        const tilt = Math.max(-35, Math.min(35, s.yawDeg * 0.25));
+        const offY = Math.max(-14, Math.min(14, s.pitchDeg * 0.45));
+        $('#horizon-line').style.transform = `translateY(${offY.toFixed(1)}px) rotate(${tilt.toFixed(1)}deg)`;
+      }
+
+      // Live ECG Heartbeat pulse waveform (~15 Hz)
+      if (now - lastWaveT > 66) {
         lastWaveT = now;
+        const bpm = Math.round(s.bpm);
         const beatPhase = (s.t * (bpm / 60)) % 1;
         const hIcon = $('#heart-beat-icon');
         if (hIcon) hIcon.classList.toggle('lub', beatPhase > 0.24 && beatPhase < 0.36);
-        // Realistic ECG QRS spike shape!
         let y = 26;
         if (beatPhase > 0.12 && beatPhase < 0.18) y = 21;
         else if (beatPhase >= 0.22 && beatPhase < 0.26) y = 33;
@@ -934,15 +952,6 @@ export function initUI(stage) {
         $('#wave-ghost').setAttribute('d', dG);
         $('#wave-dot').setAttribute('cy', samples[samples.length - 1].toFixed(1));
       }
-
-      // Orientation Dial (Card 05)
-      $('#cam-dist').textContent = `${s.dist.toFixed(2)} M`;
-      $('#cam-yaw').textContent = `${s.yawDeg >= 0 ? '+' : ''}${s.yawDeg.toFixed(1)}°`;
-      $('#cam-pitch').textContent = `${s.pitchDeg >= 0 ? '+' : ''}${s.pitchDeg.toFixed(1)}°`;
-      $('#cam-fps').textContent = `${s.fps}`;
-      const tilt = Math.max(-35, Math.min(35, s.yawDeg * 0.25));
-      const offY = Math.max(-14, Math.min(14, s.pitchDeg * 0.45));
-      $('#horizon-line').style.transform = `translateY(${offY.toFixed(1)}px) rotate(${tilt.toFixed(1)}deg)`;
     },
     onOrbHit(hitCount, pos) {
       const lines = [
