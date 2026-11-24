@@ -131,6 +131,9 @@ export class CharacterStage {
     };
     this.turntable = false;
     this.turntableAngle = 0;
+    this.aiBody = null;
+    this.aiBodyBlend = 0;
+    this.aiTurnAngle = 0;
     this.outfitMode = 'full'; // 'full' | 'open' | 'beach'
     this.viewMode = 'normal'; // 'normal' | 'skeleton' | 'wireframe'
     this.skeletonHelper = null;
@@ -782,6 +785,14 @@ export class CharacterStage {
     if (type !== 'pout' && type !== 'bonk') this._burstHearts(origin || new THREE.Vector3(0, 1.38, 0.14));
     const displayText = leveledUp ? `BOND LVL ${this.bondLevel} UNLOCKED ♡` : (customText || def.text);
     this.opts.onReaction?.(type, displayText, this.patCount, this.affection, this.bondLevel);
+  }
+
+  say(text) {
+    if (!text) return;
+    this.talkTimer = 2.2;
+    this.idleCommentTimer = 15;
+    this.excitement = Math.min(1, this.excitement + 0.45);
+    this.opts.onReaction?.('body', text, this.patCount, this.affection, this.bondLevel);
   }
 
   setSpeaking(on) {
@@ -1692,6 +1703,30 @@ export class CharacterStage {
     this.load('/models/darkness_shibu.vrm');
   }
 
+  // === AI-DRIVEN FULL BODY CONTROLLER (arms, head, torso, turn, legs, expression) ===
+  setBodyPose(cmd) {
+    if (!cmd || cmd.reset) {
+      this.aiBody = null;
+      return;
+    }
+    const dur = clamp(Number(cmd.hold) || 6.0, 1.8, 16);
+    this.aiBody = {
+      lArm: cmd.lArm || null,
+      rArm: cmd.rArm || null,
+      head: cmd.head || null,
+      torso: cmd.torso || null,
+      leg: cmd.leg || null,
+      turn: typeof cmd.turn === 'number' ? cmd.turn : 0,
+      expr: cmd.expr || null,
+      time: 0,
+      dur,
+    };
+    // Clear overlapping preset reaction so explicit AI body command has crisp control
+    if (cmd.lArm || cmd.rArm || cmd.torso || cmd.leg || cmd.head || cmd.turn) {
+      this.reaction = null;
+    }
+  }
+
   setScrollProgress(p01) {
     this.scrollProgress = clamp(p01, 0, 1);
     this.cameraOverride = null;
@@ -1899,6 +1934,31 @@ export class CharacterStage {
     const sulk = this.offendedBlend;
     const pout = Math.max(type === 'pout' ? env : 0, bonk * 0.92, sulk * 0.78);
 
+    // AI-Driven Custom Body Command smooth envelope & turn interpolation
+    let ab = this.aiBody;
+    let aiTargetW = 0;
+    if (ab) {
+      ab.time += dt;
+      if (ab.time >= ab.dur) {
+        this.aiBody = null;
+        ab = null;
+      } else {
+        const fadeIn = smooth(ab.time / 0.42);
+        const fadeOut = smooth((ab.dur - ab.time) / 0.65);
+        aiTargetW = Math.min(fadeIn, fadeOut);
+      }
+    }
+    this.aiBodyBlend += (aiTargetW - this.aiBodyBlend) * (1 - Math.exp(-dt * 8.5));
+    const aiW = ab ? this.aiBodyBlend : 0;
+    const targetTurnRad = ab && ab.turn ? (ab.turn * Math.PI) / 180 : 0;
+    this.aiTurnAngle += (targetTurnRad - this.aiTurnAngle) * (1 - Math.exp(-dt * 4.5));
+
+    const aiSquat = ab?.torso === 'squat' ? aiW : 0;
+    const aiJump = ab?.torso === 'jump' ? aiW * Math.abs(Math.sin(t * 6.4)) : 0;
+    const aiBow = ab?.torso === 'bow' ? aiW : 0;
+    const aiLean = ab?.torso === 'leanL' ? aiW : ab?.torso === 'leanR' ? -aiW : 0;
+    const aiArch = ab?.torso === 'arch' ? aiW : 0;
+
     const danceBeat = dance * Math.sin(t * 6.8);
     const danceGroove = dance * Math.cos(t * 3.4);
     // Graceful figure-8 contrapposto weight shift with harmonic secondary motion
@@ -1915,40 +1975,53 @@ export class CharacterStage {
       dance * Math.pow(Math.abs(Math.sin(t * 6.8)), 1.4) * 0.038;
 
     // Hips + fluid contrapposto tilt + grounded leg IK
-    const drop = 0.018 + breath * 0.0025 + Math.abs(ws) * 0.009 + bounce + pat * 0.015 + shy * 0.016 + pout * 0.018;
+    const drop = 0.018 + breath * 0.0025 + Math.abs(ws) * 0.009 + bounce + pat * 0.015 + shy * 0.016 + pout * 0.018 + aiSquat * 0.22 - aiJump * 0.18;
     const hipShiftX = ws * 0.036 + peace * 0.026 - shy * 0.012;
-    const hipShiftZ = Math.sin(t * 1.64) * 0.008 * sway + kiss * 0.024 - pout * 0.015;
+    const hipShiftZ = Math.sin(t * 1.64) * 0.008 * sway + kiss * 0.024 - pout * 0.015 - aiSquat * 0.04;
     b.hips.position.set(this.hipsRest.x + hipShiftX, this.hipsRest.y - drop, this.hipsRest.z + hipShiftZ);
     b.hips.rotation.set(
-      0.028 + shy * 0.055 + kiss * 0.075 + Math.sin(t * 1.64) * 0.014 * sway,
+      0.028 + shy * 0.055 + kiss * 0.075 + Math.sin(t * 1.64) * 0.014 * sway + aiBow * 0.14 + aiSquat * 0.12,
       ws * 0.13 + turn * 0.42 + peace * 0.22 - pout * 0.20 + danceGroove * 0.16,
       -ws * 0.085 + peace * 0.11 - kiss * 0.045
     );
 
     // Delayed fluid spine -> chest -> upperChest follow-through
     b.spine.rotation.set(
-      0.022 + breath * 0.016 + happy * 0.035 + kiss * 0.13 - pout * 0.055,
+      0.022 + breath * 0.016 + happy * 0.035 + kiss * 0.13 - pout * 0.055 + aiBow * 0.38 + aiSquat * 0.16 - aiArch * 0.18,
       -wsSpine * 0.065 + turn * 0.26 + danceBeat * 0.16,
-      wsSpine * 0.078 - peace * 0.085
+      wsSpine * 0.078 - peace * 0.085 + aiLean * 0.22
     );
     b.chest?.rotation.set(
-      -breath * 0.026 - shy * 0.065 + pat * 0.055 + kiss * 0.095 + dance * 0.04,
+      -breath * 0.026 - shy * 0.065 + pat * 0.055 + kiss * 0.095 + dance * 0.04 + aiBow * 0.28 - aiArch * 0.15,
       turn * 0.22 - wave * 0.09 + danceBeat * 0.15 - danceGroove * 0.08,
-      wsChest * 0.042 - peace * 0.03
+      wsChest * 0.042 - peace * 0.03 + aiLean * 0.14
     );
-    b.upperChest?.rotation.set(-breath * 0.018, turn * 0.12 + danceGroove * 0.06, wsChest * 0.018);
+    b.upperChest?.rotation.set(-breath * 0.018 + aiBow * 0.12, turn * 0.12 + danceGroove * 0.06, wsChest * 0.018);
 
     // Auto-match VRM 0.0 vs VRM 1.0 normalized bone axis signs!
     const vSign = this.isVrm0 ? -1 : 1;
 
     const shrug = pat * 0.15 + shy * 0.14 + pout * 0.11 + Math.max(0, breath) * 0.022;
     const shWave = Math.sin(t * 0.82 - 0.5) * 0.022 * sway;
-    b.leftShoulder?.rotation.set(0, 0, (shrug + shWave + danceBeat * 0.08 + peace * 0.06) * vSign);
-    b.rightShoulder?.rotation.set(0, 0, (-shrug - shWave - wave * 0.13 - kiss * 0.11 - danceBeat * 0.08) * vSign);
+    const lArmUpSh = (ab?.lArm === 'up' || ab?.lArm === 'heart' || ab?.lArm === 'wave') ? aiW * 0.22 : 0;
+    const rArmUpSh = (ab?.rArm === 'up' || ab?.rArm === 'heart' || ab?.rArm === 'wave') ? aiW * 0.22 : 0;
+    b.leftShoulder?.rotation.set(0, 0, (shrug + shWave + danceBeat * 0.08 + peace * 0.06 + lArmUpSh) * vSign);
+    b.rightShoulder?.rotation.set(0, 0, (-shrug - shWave - wave * 0.13 - kiss * 0.11 - danceBeat * 0.08 - rArmUpSh) * vSign);
 
-    // Head & eyes follow cursor + graceful head-bob & expressive pose tilts
+    // Head & eyes follow cursor + graceful head-bob & expressive pose tilts + AI head commands
     const lx = this.look.x;
     const ly = this.look.y;
+    let aiHeadYaw = 0, aiHeadPitch = 0, aiHeadTilt = 0;
+    if (ab?.head && aiW > 0.001) {
+      if (ab.head === 'left') aiHeadYaw = 0.58 * aiW;
+      else if (ab.head === 'right') aiHeadYaw = -0.58 * aiW;
+      else if (ab.head === 'up') aiHeadPitch = -0.38 * aiW;
+      else if (ab.head === 'down') aiHeadPitch = 0.42 * aiW;
+      else if (ab.head === 'tiltL') aiHeadTilt = 0.36 * aiW;
+      else if (ab.head === 'tiltR') aiHeadTilt = -0.36 * aiW;
+      else if (ab.head === 'nod') aiHeadPitch = Math.sin(t * 7.5) * 0.28 * aiW;
+      else if (ab.head === 'shake') aiHeadYaw = Math.sin(t * 8.5) * 0.44 * aiW;
+    }
     const tilt =
       (Math.sin(t * 0.62 - 0.9) * 0.085 + Math.sin(t * 1.24) * 0.02 - lx * 0.10) * headTilt +
       pat * 0.30 +
@@ -1957,14 +2030,15 @@ export class CharacterStage {
       peace * 0.26 -
       kiss * 0.18 -
       pout * 0.20 +
-      danceBeat * 0.16;
-    const yaw = lx * 0.62 - turn + pout * 0.30 + danceGroove * 0.12;
-    const pitch = (-ly * 0.32 + pat * 0.32 + shy * 0.18 - happy * 0.07 - kiss * 0.09 + dance * Math.sin(t * 13.6) * 0.04) * vSign;
+      danceBeat * 0.16 +
+      aiHeadTilt;
+    const yaw = lx * 0.62 * (1 - (ab?.head ? aiW * 0.85 : 0)) - turn + pout * 0.30 + danceGroove * 0.12 + aiHeadYaw;
+    const pitch = (-ly * 0.32 * (1 - (ab?.head ? aiW * 0.85 : 0)) + pat * 0.32 + shy * 0.18 - happy * 0.07 - kiss * 0.09 + dance * Math.sin(t * 13.6) * 0.04 + aiHeadPitch) * vSign;
     b.neck?.rotation.set(pitch * 0.42, yaw * 0.42, tilt * 0.42 * vSign);
     b.head.rotation.set(pitch * 0.58, yaw * 0.58, tilt * 0.58 * vSign);
     this.lookTarget.position.set(lx * 1.15, 1.42 + ly * 0.6, 1.6);
 
-    // Arms (graceful natural hang + expressive multi-phase choreography!)
+    // Arms (graceful natural hang + expressive multi-phase choreography + AI independent arm control!)
     const down = 1.22;
     const swayL = (Math.sin(t * 0.82 + 0.55) * 0.042 + Math.sin(t * 1.64) * 0.012) * sway;
     const swayR = (Math.sin(t * 0.82 + 2.15) * 0.042 + Math.sin(t * 1.64 + 1.1) * 0.012) * sway;
@@ -1973,76 +2047,119 @@ export class CharacterStage {
     const danceArmR = dance * -Math.sin(t * 6.8) * 0.38;
     const danceWrist = dance * Math.cos(t * 6.8) * 0.28;
 
-    // Left arm (rests gracefully on hip during peace/kiss, sways fluidly at rest & dances!)
+    const getAiArmPose = (poseName, isLeft) => {
+      const s = isLeft ? 1 : -1; // Left upper arm Z+ raises arm up; Right upper arm Z- raises arm up
+      const wOsc = Math.sin(t * 10.5) * 0.30;
+      switch (poseName) {
+        case 'up':
+          return { ux: -0.14 * vSign, uy: 0.14 * s, uz: 1.18 * s * vSign, lx: -0.10 * vSign, ly: -0.14 * s, lz: 0 };
+        case 'wave':
+          return { ux: -0.30 * vSign, uy: -0.28 * s, uz: 0.52 * s * vSign, lx: -0.95 * vSign, ly: -0.34 * s, lz: (0.86 + wOsc) * s * vSign };
+        case 'side':
+          return { ux: 0, uy: 0, uz: -0.06 * s * vSign, lx: 0, ly: -0.08 * s, lz: 0 };
+        case 'forward':
+          return { ux: -0.12 * vSign, uy: 1.26 * s, uz: -0.14 * s * vSign, lx: 0, ly: -0.16 * s, lz: 0 };
+        case 'hip':
+          return { ux: 0.16 * vSign, uy: 0.26 * s, uz: -0.76 * s * vSign, lx: 0.22 * vSign, ly: -1.36 * s, lz: 0 };
+        case 'cross':
+          return { ux: -0.22 * vSign, uy: 0.88 * s, uz: -0.82 * s * vSign, lx: 0.16 * vSign, ly: -1.48 * s, lz: 0 };
+        case 'heart':
+          return { ux: -0.12 * vSign, uy: 0.18 * s, uz: 1.06 * s * vSign, lx: -0.25 * vSign, ly: -0.36 * s, lz: -1.32 * s * vSign };
+        case 'peace':
+          return { ux: -0.28 * vSign, uy: -0.32 * s, uz: 0.36 * s * vSign, lx: -1.04 * vSign, ly: -0.46 * s, lz: 0.84 * s * vSign };
+        case 'down':
+          return { ux: 0.04 * vSign, uy: 0.06 * s, uz: -down * s * vSign, lx: 0, ly: -0.16 * s, lz: 0 };
+        default:
+          return null;
+      }
+    };
+    const lerp = (a, b2, w2) => a * (1 - w2) + b2 * w2;
+
+    // Left arm
+    let lUx = (0.06 - shy * 0.36 - pout * 0.24 + cheer + danceArmL * 0.45 + peace * 0.12) * vSign;
+    let lUy = 0.08 + shy * 0.28 + peace * 0.18;
+    let lUz = -(down + swayL - happy * 0.35 - spin * 0.52 - dance * 0.38 - peace * 0.26 - kiss * 0.10) * vSign;
+    let lLx = (peace * 0.16 + dance * 0.12) * vSign;
+    let lLy = -(0.20 + shy * 0.82 + pout * 0.68 + happy * 0.48 + dance * 0.62 + peace * 0.72 + kiss * 0.28);
+    let lLz = 0;
+    const aiL = ab?.lArm ? getAiArmPose(ab.lArm, true) : null;
+    if (aiL && aiW > 0.001) {
+      lUx = lerp(lUx, aiL.ux, aiW);
+      lUy = lerp(lUy, aiL.uy, aiW);
+      lUz = lerp(lUz, aiL.uz, aiW);
+      lLx = lerp(lLx, aiL.lx, aiW);
+      lLy = lerp(lLy, aiL.ly, aiW);
+      lLz = lerp(lLz, aiL.lz, aiW);
+    }
     b.leftUpperArm.rotation.order = 'XYZ';
-    b.leftUpperArm.rotation.set(
-      (0.06 - shy * 0.36 - pout * 0.24 + cheer + danceArmL * 0.45 + peace * 0.12) * vSign,
-      0.08 + shy * 0.28 + peace * 0.18,
-      -(down + swayL - happy * 0.35 - spin * 0.52 - dance * 0.38 - peace * 0.26 - kiss * 0.10) * vSign
-    );
-    b.leftLowerArm.rotation.order = 'XYZ';
-    b.leftLowerArm.rotation.set(
-      (peace * 0.16 + dance * 0.12) * vSign,
-      -(0.20 + shy * 0.82 + pout * 0.68 + happy * 0.48 + dance * 0.62 + peace * 0.72 + kiss * 0.28),
-      0
-    );
+    b.leftUpperArm.rotation.set(lUx, lUy, lUz);
+    b.leftLowerArm.rotation.order = aiL && (ab.lArm === 'wave' || ab.lArm === 'peace' || ab.lArm === 'heart') ? 'ZYX' : 'XYZ';
+    b.leftLowerArm.rotation.set(lLx, lLy, lLz);
     b.leftHand.rotation.set(
       Math.sin(t * 1.2) * 0.06 * sway + danceWrist * 0.5,
       peace * 0.22,
       (-0.08 - swayL * 1.4 - danceWrist * 0.6) * vSign
     );
 
-    // Right arm (raises smoothly for wave / two-phase blown kiss / peace ✌️ / dance!)
+    // Right arm
     const rRaise = Math.max(wave, kiss * 0.94, peace * 0.88);
     const kissSend = kiss * smooth((p - 0.42) / 0.34);
-    b.rightUpperArm.rotation.order = 'XYZ';
-    b.rightUpperArm.rotation.set(
-      ((0.06 - shy * 0.36 - pout * 0.24 - cheer + danceArmR * 0.45) * (1 - rRaise) - kiss * (0.38 - kissSend * 0.14) - wave * 0.30 - peace * 0.28) * vSign,
-      -0.08 - shy * 0.28 + wave * 0.34 + kiss * (0.72 - kissSend * 0.42) + peace * 0.32,
-      (down + swayR - happy * 0.35 - spin * 0.52 - dance * 0.38 - rRaise * 0.85) * vSign
-    );
+    let rUx = ((0.06 - shy * 0.36 - pout * 0.24 - cheer + danceArmR * 0.45) * (1 - rRaise) - kiss * (0.38 - kissSend * 0.14) - wave * 0.30 - peace * 0.28) * vSign;
+    let rUy = -0.08 - shy * 0.28 + wave * 0.34 + kiss * (0.72 - kissSend * 0.42) + peace * 0.32;
+    let rUz = (down + swayR - happy * 0.35 - spin * 0.52 - dance * 0.38 - rRaise * 0.85) * vSign;
     const osc = Math.sin(t * 10.8) * wave;
+    let rLx = (-wave * 1.18 - peace * 1.04 - kiss * (0.85 - kissSend * 0.32)) * vSign;
+    let rLy = 0.20 + shy * 0.82 + pout * 0.68 + happy * 0.48 + dance * 0.62 + wave * 0.34 + kiss * (1.02 - kissSend * 0.58) + peace * 0.46;
+    let rLz = (-wave * 0.86 + osc * 0.30 - peace * 0.84 - kiss * (0.82 - kissSend * 0.26)) * vSign;
+    const aiR = ab?.rArm ? getAiArmPose(ab.rArm, false) : null;
+    if (aiR && aiW > 0.001) {
+      rUx = lerp(rUx, aiR.ux, aiW);
+      rUy = lerp(rUy, aiR.uy, aiW);
+      rUz = lerp(rUz, aiR.uz, aiW);
+      rLx = lerp(rLx, aiR.lx, aiW);
+      rLy = lerp(rLy, aiR.ly, aiW);
+      rLz = lerp(rLz, aiR.lz, aiW);
+    }
+    b.rightUpperArm.rotation.order = 'XYZ';
+    b.rightUpperArm.rotation.set(rUx, rUy, rUz);
     b.rightLowerArm.rotation.order = 'ZYX';
-    b.rightLowerArm.rotation.set(
-      (-wave * 1.18 - peace * 1.04 - kiss * (0.85 - kissSend * 0.32)) * vSign,
-      0.20 + shy * 0.82 + pout * 0.68 + happy * 0.48 + dance * 0.62 + wave * 0.34 + kiss * (1.02 - kissSend * 0.58) + peace * 0.46,
-      (-wave * 0.86 + osc * 0.30 - peace * 0.84 - kiss * (0.82 - kissSend * 0.26)) * vSign
-    );
+    b.rightLowerArm.rotation.set(rLx, rLy, rLz);
     b.rightHand.rotation.set(
       Math.cos(t * 1.2) * 0.06 * sway - kissSend * 0.28 + danceWrist * 0.5,
       -kiss * 0.25,
       (0.08 + swayR * 1.4 + osc * 0.26 + kissSend * 0.22 + danceWrist * 0.6) * vSign
     );
 
-    // Individual finger micro-animation + real Peace ✌️ sign & graceful kiss hand open!
+    // Individual finger micro-animation + real Peace ✌️ sign & graceful open hand for AI arm commands!
     const fingerOrder = ['Index', 'Middle', 'Ring', 'Little'];
     for (const side of ['left', 'right']) {
       const sign = side === 'left' ? -1 : 1;
       const groups = this.fingerGroups?.[side];
       if (!groups) continue;
+      const sideAiArm = side === 'left' ? ab?.lArm : ab?.rArm;
       fingerOrder.forEach((fname, fi) => {
         const segs = groups[fname] || [];
         const waveCurl = Math.sin(t * 1.3 + fi * 0.45 + (side === 'right' ? 1.2 : 0)) * 0.05;
         let baseCurl = 0.18 + fi * 0.045 + waveCurl;
-        if (side === 'right') {
-          if (peace > 0.05) {
-            // Real Peace ✌️: Index & Middle straight, Ring & Little curled!
-            const target = fi < 2 ? 0.03 : 0.85;
-            baseCurl = baseCurl * (1 - peace) + target * peace;
-          } else if (wave > 0.05 || kissSend > 0.05) {
-            baseCurl *= 1 - Math.max(wave, kissSend) * 0.82;
-          }
+        const isPeaceSide = (side === 'right' && peace > 0.05) || (sideAiArm === 'peace' && aiW > 0.05);
+        const peaceAmt = sideAiArm === 'peace' ? Math.max(peace, aiW) : peace;
+        if (isPeaceSide) {
+          const target = fi < 2 ? 0.03 : 0.85;
+          baseCurl = baseCurl * (1 - peaceAmt) + target * peaceAmt;
+        } else if ((side === 'right' && (wave > 0.05 || kissSend > 0.05)) || ((sideAiArm === 'up' || sideAiArm === 'wave' || sideAiArm === 'forward') && aiW > 0.05)) {
+          const openAmt = Math.max(side === 'right' ? Math.max(wave, kissSend) : 0, aiW);
+          baseCurl *= 1 - openAmt * 0.82;
         }
         segs.forEach((fb, si) => fb.rotation.set(0, 0, sign * baseCurl * (1 + si * 0.14) * vSign));
       });
     }
 
-    // 360° Spin reaction + turntable
+    // 360° Spin reaction + turntable + AI body turn
     const spinRot = type === 'spin' ? smooth(p) * Math.PI * 2 : 0;
     if (this.turntable) this.turntableAngle += dt * 0.45;
-    this.pivot.rotation.y = this.turntableAngle + spinRot;
+    this.pivot.rotation.y = this.turntableAngle + spinRot + this.aiTurnAngle;
 
-    // Confident wider-stance Leg & Foot IK (wider base stance + dynamic poses & dance steps!)
+    // Confident wider-stance Leg & Foot IK (wider base stance + dynamic poses + AI leg lift!)
     this.pivot.updateMatrixWorld(true);
     const wideBase = 0.072;
     const idleStepL = Math.max(0, Math.sin(t * 0.82)) * 0.022 * sway;
@@ -2052,26 +2169,28 @@ export class CharacterStage {
     const happyLiftL = happy * Math.max(0, Math.sin(p * Math.PI * 4)) * 0.078;
     const happyLiftR = happy * Math.max(0, -Math.sin(p * Math.PI * 4)) * 0.078;
     const poutStompR = pout * Math.max(0, Math.sin(p * Math.PI * 3)) * 0.078;
-    const poseWide = peace * 0.08 + kiss * 0.045 + pout * 0.055;
+    const aiLegL = (ab?.leg === 'leftUp' ? aiW * 0.24 : 0) + aiJump * 0.10;
+    const aiLegR = (ab?.leg === 'rightUp' ? aiW * 0.24 : 0) + aiJump * 0.10;
+    const poseWide = peace * 0.08 + kiss * 0.045 + pout * 0.055 + (ab?.leg === 'wide' ? aiW * 0.12 : 0) + aiSquat * 0.09;
 
     if (this.legs[0]) {
       this._solveLeg(
         this.legs[0],
-        idleStepL + danceLiftL + happyLiftL,
-        -0.025 + dance * Math.sin(t * 6.8) * 0.07 + idleStepL * 1.4,
+        idleStepL + danceLiftL + happyLiftL + aiLegL,
+        -0.025 + dance * Math.sin(t * 6.8) * 0.07 + idleStepL * 1.4 + (ab?.leg === 'leftUp' ? aiW * 0.18 : 0),
         wideBase + poseWide + dance * 0.04
       );
     }
     if (this.legs[1]) {
       this._solveLeg(
         this.legs[1],
-        idleStepR + danceLiftR + happyLiftR + poutStompR + peace * 0.05,
-        0.048 - dance * Math.sin(t * 6.8) * 0.07 + peace * 0.095 + kiss * 0.055 + idleStepR * 1.4,
+        idleStepR + danceLiftR + happyLiftR + poutStompR + peace * 0.05 + aiLegR,
+        0.048 - dance * Math.sin(t * 6.8) * 0.07 + peace * 0.095 + kiss * 0.055 + idleStepR * 1.4 + (ab?.leg === 'rightUp' ? aiW * 0.18 : 0),
         -(wideBase + poseWide + dance * 0.04)
       );
     }
 
-    // Rich Facial expressions + multi-vowel lip-sync!
+    // Rich Facial expressions + multi-vowel lip-sync + AI expression override!
     const exp = this.vrm.expressionManager;
     if (exp) {
       this.blinkTimer -= dt;
@@ -2087,9 +2206,10 @@ export class CharacterStage {
         else blink = Math.sin(bp * Math.PI);
       }
 
-      const happyTarget = Math.max(pat, happy * 0.88, dance * 0.65, peace * 0.5, this.hover * 0.18);
+      const aiExpr = ab?.expr || null;
+      const happyTarget = Math.max(pat, happy * 0.88, dance * 0.65, peace * 0.5, this.hover * 0.18, aiExpr === 'happy' ? aiW * 0.9 : 0);
       this.happyE += (happyTarget - this.happyE) * (1 - Math.exp(-dt * 8));
-      this.angryE += (pout * 0.88 - this.angryE) * (1 - Math.exp(-dt * 8));
+      this.angryE += (Math.max(pout * 0.88, aiExpr === 'angry' ? aiW * 0.9 : 0) - this.angryE) * (1 - Math.exp(-dt * 8));
       this.surprise = Math.max(0, this.surprise - dt * 2.5);
       this.talkTimer = Math.max(0, this.talkTimer - dt);
 
@@ -2097,17 +2217,17 @@ export class CharacterStage {
       const talkAa = isTalking ? Math.max(0, Math.sin(t * 14.5) * 0.6 + Math.sin(t * 9.2) * 0.4) * 0.54 : 0;
       const talkIh = isTalking ? Math.max(0, Math.cos(t * 11.4 + 1.1)) * 0.30 : 0;
       const talkOu = isTalking ? Math.max(0, Math.sin(t * 7.8 + 2.3)) * 0.24 : 0;
-      const kissMouth = kiss * 0.74;
+      const kissMouth = Math.max(kiss * 0.74, aiExpr === 'kiss' ? aiW * 0.72 : 0);
 
       this._setExpr(exp, 'blink', this.happyE > 0.55 ? 0 : blink);
-      this._setExpr(exp, 'blinkLeft', Math.max(kiss * 0.88, peace * 0.84));
+      this._setExpr(exp, 'blinkLeft', Math.max(kiss * 0.88, peace * 0.84, aiExpr === 'wink' ? aiW * 0.95 : 0));
       this._setExpr(exp, 'happy', this.happyE);
       this._setExpr(exp, 'angry', this.angryE);
-      this._setExpr(exp, 'relaxed', Math.max(this.hover * 0.32, shy * 0.45, kiss * 0.25) * (1 - this.happyE));
-      this._setExpr(exp, 'surprised', this.surprise * 0.62);
-      this._setExpr(exp, 'aa', talkAa * (1 - kiss));
-      this._setExpr(exp, 'ih', talkIh * (1 - kiss));
-      this._setExpr(exp, 'ou', talkOu * (1 - kiss));
+      this._setExpr(exp, 'relaxed', Math.max(this.hover * 0.32, shy * 0.45, kiss * 0.25, aiExpr === 'shy' ? aiW * 0.65 : 0) * (1 - this.happyE));
+      this._setExpr(exp, 'surprised', Math.max(this.surprise * 0.62, aiExpr === 'surprised' ? aiW * 0.82 : 0));
+      this._setExpr(exp, 'aa', talkAa * (1 - kissMouth));
+      this._setExpr(exp, 'ih', talkIh * (1 - kissMouth));
+      this._setExpr(exp, 'ou', talkOu * (1 - kissMouth));
       this._setExpr(exp, 'oh', kissMouth);
     }
 

@@ -1,5 +1,5 @@
 import { TOKEN } from './config.js';
-import { FreeAIChat } from './aiChat.js';
+import { FreeAIChat, inferBodyCommandFromUser } from './aiChat.js';
 import { renderY2KLogo } from './logoForge.js';
 import { yuzuWallet } from './walletconnect.js';
 import { initModStudio } from './modStudio.js';
@@ -499,6 +499,9 @@ export function initUI(stage) {
     if (!clean) return;
     stopTour();
     appendChat(clean, 'user');
+    // Instant 0ms body reaction if user asked for a physical movement (AI can still refine it!)
+    const instantBody = inferBodyCommandFromUser(clean);
+    if (instantBody) stage.setBodyPose(instantBody);
     const typing = appendChat('> thinking…', 'bot');
     const marketCtx = latestMarket.length
       ? `[LIVE CRYPTO MARKET: ${latestMarket.map((m) => `${m.sym} $${m.price >= 1 ? m.price.toFixed(2) : m.price.toFixed(5)} (${m.pct >= 0 ? '+' : ''}${m.pct.toFixed(1)}%)`).join(', ')}]`
@@ -508,7 +511,12 @@ export function initUI(stage) {
     if (reply) {
       stage.setOffended(ai.mood === 'offended');
       appendChat(`> ${reply.text}`, 'bot');
-      stage.react(reply.pose, null, reply.text);
+      if (reply.body) {
+        stage.setBodyPose(reply.body);
+        stage.say(reply.text);
+      } else {
+        stage.react(reply.pose, null, reply.text);
+      }
       if (reply.action) executeSiteAction(reply.action);
     }
   };
