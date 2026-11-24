@@ -447,39 +447,6 @@
       </div>
     </div>
 
-    <!-- SOLANA WALLET CONNECT MODAL (Phantom / Solflare / Backpack / OKX / Coinbase) -->
-    <div class="docs-overlay" id="wallet-overlay" aria-hidden="true">
-      <div class="docs-modal wallet-modal">
-        <div class="docs-head">
-          <div>
-            <span class="acid-text">SOLANA MAINNET // WALLET ADAPTER</span>
-            <h2 id="wallet-modal-title">CONNECT WALLET</h2>
-          </div>
-          <button class="gloss-key" id="btn-close-wallet">ESC [X]</button>
-        </div>
-
-        <!-- Disconnected: Wallet Provider Selector -->
-        <div id="wallet-list-view" class="wallet-list"></div>
-
-        <!-- Connected: Account & Sign-In Panel -->
-        <div id="wallet-account-view" class="wallet-account" style="display:none">
-          <div class="spec-rows">
-            <div><span>PROVIDER</span><b id="wm-provider">—</b></div>
-            <div><span>ADDRESS</span><b id="wm-addr">—</b></div>
-            <div><span>SOL BALANCE</span><b id="wm-sol">—</b></div>
-            <div><span>$<span data-ticker>YUZU</span></span><b id="wm-token">—</b></div>
-            <div><span>OG VERIFY</span><b class="acid-text" id="wm-verified">UNVERIFIED</b></div>
-          </div>
-          <div class="key-grid" style="margin-top:12px">
-            <button class="gloss-key" id="btn-wm-copy">COPY ADDRESS</button>
-            <a class="gloss-key" id="btn-wm-solscan" href="#" target="_blank" rel="noopener">SOLSCAN ↗</a>
-            <button class="gloss-key gloss-pink" id="btn-wm-sign">SIGN MESSAGE</button>
-            <button class="gloss-key" id="btn-wm-disconnect">DISCONNECT</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="toast" id="toast"></div>
     <script type="module" src="/src/main.js"></script>
   </body>

@@ -1,6 +1,7 @@
 import { TOKEN } from './config.js';
 import { FreeAIChat } from './aiChat.js';
 import { renderY2KLogo } from './logoForge.js';
+import { yuzuWallet } from './walletconnect.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -145,7 +146,7 @@ export function initUI(stage) {
           })
           .join('');
       }
-    } catch {}
+    } catch { }
   };
   loadCryptoRadar();
   setInterval(loadCryptoRadar, 25000);
@@ -788,27 +789,13 @@ export function initUI(stage) {
       const el = $('#st-change');
       el.textContent = ch == null ? '—' : `${ch > 0 ? '+' : ''}${ch.toFixed(1)}%`;
       el.className = ch > 0 ? 'up' : ch < 0 ? 'down' : '';
-    } catch {}
+    } catch { }
   };
   loadMarket();
   setInterval(loadMarket, 30000);
 
-  // Standard Solana Multi-Wallet Connect Modal (Phantom / Solflare / Backpack / OKX / Coinbase)
-  const WALLET_PROVIDERS = [
-    { id: 'phantom', name: 'Phantom', tag: 'PH', url: 'https://phantom.app/', get: () => window.phantom?.solana || (window.solana?.isPhantom ? window.solana : null) },
-    { id: 'solflare', name: 'Solflare', tag: 'SF', url: 'https://solflare.com/', get: () => window.solflare?.isSolflare ? window.solflare : null },
-    { id: 'backpack', name: 'Backpack', tag: 'BP', url: 'https://backpack.app/', get: () => window.backpack?.solana || null },
-    { id: 'okx', name: 'OKX Wallet', tag: 'OKX', url: 'https://www.okx.com/web3', get: () => window.okxwallet?.solana || null },
-    { id: 'coinbase', name: 'Coinbase Wallet', tag: 'CB', url: 'https://www.coinbase.com/wallet', get: () => window.coinbaseSolana || null },
-  ];
-
-  const walletOverlay = $('#wallet-overlay');
-  const walletListView = $('#wallet-list-view');
-  const walletAccountView = $('#wallet-account-view');
-  let activeProvider = null;
-  let activeWalletMeta = null;
-  let pubkey = null;
-
+  // Reown AppKit (WalletConnect QR + MetaMask + Phantom + Solflare + Coinbase + Trust + 160+ wallets)
+  let lastConnectedAddr = null;
   const rpc = async (method, params) => {
     const r = await fetch(TOKEN.rpc, {
       method: 'POST',
@@ -820,157 +807,62 @@ export function initUI(stage) {
     return j.result;
   };
 
-  const renderWalletModal = () => {
-    const title = $('#wallet-modal-title');
-    if (pubkey) {
-      if (title) title.textContent = 'WALLET CONNECTED';
-      if (walletListView) walletListView.style.display = 'none';
-      if (walletAccountView) walletAccountView.style.display = 'flex';
-      $('#wm-provider').textContent = activeWalletMeta?.name || 'Solana Wallet';
-      $('#wm-addr').textContent = shortAddr(pubkey);
-      const solscan = $('#btn-wm-solscan');
-      if (solscan) solscan.href = `https://solscan.io/account/${pubkey}`;
-      return;
-    }
-    if (title) title.textContent = 'CONNECT SOLANA WALLET';
-    if (walletListView) {
-      walletListView.style.display = 'flex';
-      walletListView.innerHTML = WALLET_PROVIDERS.map((w) => {
-        const installed = !!w.get();
-        return `<button type="button" class="wallet-item" data-wallet-id="${w.id}">
-          <span class="wallet-item-left">
-            <span class="wallet-badge-icon">${w.tag}</span>
-            <span>${w.name}</span>
-          </span>
-          <span class="wallet-status ${installed ? 'detected' : ''}">${installed ? 'DETECTED' : 'INSTALL'}</span>
-        </button>`;
-      }).join('');
-      walletListView.querySelectorAll('[data-wallet-id]').forEach((btn) => {
-        btn.addEventListener('click', () => connectWalletById(btn.dataset.walletId));
-      });
-    }
-    if (walletAccountView) walletAccountView.style.display = 'none';
-  };
-
-  const setWallet = async (pk, meta = null) => {
-    pubkey = pk;
-    if (meta) activeWalletMeta = meta;
-    $('#btn-wallet').classList.toggle('connected', !!pk);
-    if (!pk) {
-      activeProvider = null;
-      activeWalletMeta = null;
-      localStorage.removeItem('yuzu_wallet_id');
+  yuzuWallet.subscribe(async ({ isConnected, address, namespace }) => {
+    $('#btn-wallet')?.classList.toggle('connected', isConnected);
+    if (!isConnected || !address) {
+      lastConnectedAddr = null;
       $('#wallet-label').textContent = 'CONNECT';
       $('#bw-addr').textContent = 'NOT CONNECTED';
       $('#bw-sol').textContent = '—';
       $('#bw-token').textContent = '—';
-      $('#wm-sol').textContent = '—';
-      $('#wm-token').textContent = '—';
-      $('#wm-verified').textContent = 'UNVERIFIED';
-      renderWalletModal();
       return;
     }
-    $('#wallet-label').textContent = shortAddr(pk);
-    $('#bw-addr').textContent = shortAddr(pk);
-    renderWalletModal();
-    try {
-      const bal = await rpc('getBalance', [pk]);
-      const sol = (bal.value / 1e9).toFixed(3);
-      $('#bw-sol').textContent = `${sol} SOL`;
-      $('#wm-sol').textContent = `${sol} SOL`;
-      $('#wallet-label').textContent = `${shortAddr(pk)} · ${sol} SOL`;
-    } catch {
-      $('#bw-sol').textContent = 'RPC busy';
-      $('#wm-sol').textContent = 'RPC busy';
-    }
-    if (hasCA()) {
+    const isNew = address !== lastConnectedAddr;
+    lastConnectedAddr = address;
+    $('#wallet-label').textContent = shortAddr(address);
+    $('#bw-addr').textContent = shortAddr(address);
+
+    if (namespace === 'solana') {
       try {
-        const res = await rpc('getTokenAccountsByOwner', [pk, { mint: TOKEN.contractAddress }, { encoding: 'jsonParsed' }]);
-        const amt = res.value.reduce((s, a) => s + (a.account.data.parsed.info.tokenAmount.uiAmount || 0), 0);
-        const fmt = amt.toLocaleString('en-US', { maximumFractionDigits: 2 });
-        $('#bw-token').textContent = fmt;
-        $('#wm-token').textContent = fmt;
+        const bal = await rpc('getBalance', [address]);
+        const sol = (bal.value / 1e9).toFixed(3);
+        $('#bw-sol').textContent = `${sol} SOL`;
+        $('#wallet-label').textContent = `${shortAddr(address)} · ${sol} SOL`;
       } catch {
-        $('#bw-token').textContent = '—';
-        $('#wm-token').textContent = '—';
+        $('#bw-sol').textContent = 'SOLANA';
       }
+      if (hasCA()) {
+        try {
+          const res = await rpc('getTokenAccountsByOwner', [address, { mint: TOKEN.contractAddress }, { encoding: 'jsonParsed' }]);
+          const amt = res.value.reduce((s, a) => s + (a.account.data.parsed.info.tokenAmount.uiAmount || 0), 0);
+          $('#bw-token').textContent = amt.toLocaleString('en-US', { maximumFractionDigits: 2 });
+        } catch {
+          $('#bw-token').textContent = '—';
+        }
+      }
+    } else {
+      $('#bw-sol').textContent = 'EVM CONNECTED';
     }
-  };
 
-  const connectWalletById = async (id, silent = false) => {
-    const meta = WALLET_PROVIDERS.find((w) => w.id === id);
-    if (!meta) return;
-    const prov = meta.get();
-    if (!prov) {
-      if (!silent) {
-        toast(`Install ${meta.name} to connect`);
-        window.open(meta.url, '_blank', 'noopener');
-      }
-      return;
+    if (isNew) {
+      toast('Wallet connected');
+      const msg = 'Wallet connected! Your account is now linked to the $YUZU terminal.';
+      stage.react('happy', null, msg);
+      ai.speak(msg);
     }
+  });
+
+  $('#btn-wallet')?.addEventListener('click', async () => {
     try {
-      const r = silent ? await prov.connect({ onlyIfTrusted: true }) : await prov.connect();
-      const pk = (r?.publicKey || prov.publicKey)?.toString();
-      if (!pk) return;
-      activeProvider = prov;
-      localStorage.setItem('yuzu_wallet_id', meta.id);
-      prov.on?.('disconnect', () => setWallet(null));
-      prov.on?.('accountChanged', (newPk) => setWallet(newPk ? newPk.toString() : null, meta));
-      await setWallet(pk, meta);
-      if (!silent) {
-        walletOverlay?.classList.remove('open');
-        toast(`${meta.name} connected`);
-        const msg = `${meta.name} connected! Your Solana wallet is linked to $YUZU.`;
-        stage.react('happy', null, msg);
-        ai.speak(msg);
-      }
-    } catch {
-      if (!silent) toast('Connection cancelled');
-    }
-  };
-
-  $('#btn-wallet')?.addEventListener('click', () => {
-    renderWalletModal();
-    walletOverlay?.classList.add('open');
-  });
-  $('#btn-close-wallet')?.addEventListener('click', () => walletOverlay?.classList.remove('open'));
-  walletOverlay?.addEventListener('click', (e) => {
-    if (e.target === walletOverlay) walletOverlay.classList.remove('open');
-  });
-
-  $('#btn-wm-copy')?.addEventListener('click', async () => {
-    if (!pubkey) return;
-    await navigator.clipboard.writeText(pubkey);
-    toast('Wallet address copied');
-  });
-  $('#btn-wm-sign')?.addEventListener('click', async () => {
-    if (!activeProvider || !pubkey) return;
-    try {
-      const msgBytes = new TextEncoder().encode(`Sign in to $YUZU Terminal\nWallet: ${pubkey}\nTimestamp: ${Date.now()}`);
-      if (activeProvider.signMessage) {
-        await activeProvider.signMessage(msgBytes, 'utf8');
-        $('#wm-verified').textContent = 'VERIFIED OG';
-        toast('Wallet ownership verified');
-        const msg = 'Signature verified! Your wallet is officially locked in as an OG $YUZU holder.';
-        stage.react('peace', null, msg);
-        ai.speak(msg);
-      } else {
-        toast('Wallet does not support signMessage');
-      }
-    } catch {
-      toast('Signature cancelled');
+      await yuzuWallet.open();
+    } catch (err) {
+      console.error('Reown AppKit open error:', err);
+      toast('Wallet modal failed to load — try again');
     }
   });
-  $('#btn-wm-disconnect')?.addEventListener('click', async () => {
-    try { await activeProvider?.disconnect?.(); } catch {}
-    await setWallet(null);
-    walletOverlay?.classList.remove('open');
-    toast('Wallet disconnected');
-  });
 
-  // Auto-reconnect trusted wallet on page reload
-  const savedWalletId = localStorage.getItem('yuzu_wallet_id');
-  if (savedWalletId) setTimeout(() => connectWalletById(savedWalletId, true), 600);
+  // Restore previous Reown AppKit session silently
+  setTimeout(() => yuzuWallet.restore(), 900);
 
   // Live ECG Heartbeat waveform & HUD frame updater
   const samples = new Array(44).fill(26);
