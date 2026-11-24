@@ -57,6 +57,11 @@ a { color: inherit; text-decoration: none; }
   transition: opacity .45s;
 }
 .stage-loader.hidden { opacity: 0; pointer-events: none; }
+.loader-logo {
+  width: 170px; height: auto; border-radius: 14px;
+  mix-blend-mode: lighten;
+  filter: drop-shadow(0 0 22px rgba(114, 231, 255, 0.35));
+}
 .loader-ring {
   width: 36px; height: 36px; border-radius: 50%;
   border: 1.5px solid rgba(217,217,232,0.14); border-top-color: var(--pink); border-right-color: var(--blue);
@@ -83,7 +88,28 @@ a { color: inherit; text-decoration: none; }
   background: rgba(8, 8, 12, 0.78); backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
-.brand { display: flex; align-items: center; gap: 14px; }
+.brand { display: flex; align-items: center; gap: 11px; }
+.brand-logo {
+  width: 30px; height: 30px; border-radius: 8px; object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 12px rgba(255, 139, 203, 0.35);
+}
+.hero-logo-wrap {
+  margin: 4px 0 8px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.hero-logo {
+  width: 100%; max-width: 245px; height: auto; display: block;
+  margin: -20px 0 -16px;
+  mix-blend-mode: lighten;
+  filter: drop-shadow(0 0 16px rgba(114, 231, 255, 0.28));
+}
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
 .brand-title { font-family: var(--display); font-size: 18px; font-weight: 700; letter-spacing: .04em; }
 .sys-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: .14em; color: var(--acid); }
 .acid-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--acid); box-shadow: 0 0 8px var(--acid); }

@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta property="og:title" content="$YUZU® // DIGITAL UNIVERSE 2026" />
+    <meta property="og:description" content="The first living 3D AI companion on Solana. Pet, talk, trade & farm up to 5x OG Airdrop." />
+    <meta property="og:image" content="https://yuzuha-simulator.vercel.app/yuzu-logo.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://yuzuha-simulator.vercel.app/yuzu-logo.jpg" />
     <title>$YUZU® // DIGITAL UNIVERSE 2026</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,6 +25,7 @@
     <!-- FIXED CENTERED 3D STAGE (3D Girl + Real 3D Liquid-Chrome Cyber-Tribal & Glossy Glass Scene) -->
     <div id="stage-fixed" class="stage-fixed">
       <div class="stage-loader" id="stage-loader">
+        <img src="/yuzu-logo.jpg" class="loader-logo" alt="$YUZU" />
         <div class="loader-ring"></div>
         <span id="stage-loader-text">SYSTEM BOOT // 0%</span>
       </div>
@@ -28,6 +35,7 @@
     <!-- EDITORIAL TOP BAR -->
     <header class="hud-top">
       <a href="#band-1" class="brand">
+        <img src="/yuzu-logo.jpg" class="brand-logo" alt="$YUZU" />
         <span class="brand-title">$<span data-ticker>YUZU</span>®</span>
         <span class="sys-badge"><span class="acid-dot"></span>SYSTEM ONLINE</span>
       </a>
@@ -64,20 +72,10 @@
               <span>001 — DIGITAL OBJECT</span>
               <span class="acid-text">EST. 2026</span>
             </div>
-            <!-- Liquid Chrome Y2K Cyber-Tribal Ornament -->
-            <svg class="chrome-tribal" viewBox="0 0 320 44" fill="none" aria-hidden="true">
-              <defs>
-                <linearGradient id="chromeGrad" x1="0" y1="0" x2="320" y2="44" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stop-color="#D9D9E8"/>
-                  <stop offset="32%" stop-color="#FFFFFF"/>
-                  <stop offset="52%" stop-color="#FF8BCB"/>
-                  <stop offset="76%" stop-color="#72E7FF"/>
-                  <stop offset="100%" stop-color="#D9D9E8"/>
-                </linearGradient>
-              </defs>
-              <path d="M160 2L166 17L196 10L174 22L235 16L182 28L318 22L192 34L228 42L165 30L160 42L155 30L92 42L128 34L2 22L138 28L85 16L146 22L124 10L154 17Z" fill="url(#chromeGrad)" opacity="0.9"/>
-            </svg>
-            <h1 class="hero-display">$<span data-ticker>YUZU</span></h1>
+            <div class="hero-logo-wrap">
+              <img src="/yuzu-logo.jpg" class="hero-logo" alt="$YUZU — SOLANA 2026" />
+              <h1 class="sr-only">$<span data-ticker>YUZU</span></h1>
+            </div>
             <p class="hero-lead">THE FIRST LIVING 3D AI WAIFU ON SOLANA. PET, TALK, TRADE &amp; FARM UP TO <b class="acid-text">5× OG AIRDROP</b>.</p>
 
             <div class="og-hook-strip">
