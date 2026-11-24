@@ -37,7 +37,7 @@ async function getModal() {
             name: '$YUZU Terminal',
             description: 'Interactive 3D Cyber Y2K AI Companion on Solana',
             url: window.location.origin,
-            icons: ['https://yuzuha-simulator.vercel.app/favicon.ico'],
+            icons: [`${window.location.origin}/favicon.png`],
           },
           features: { analytics: false, email: false, socials: [] },
           themeMode: 'dark',

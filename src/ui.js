@@ -50,7 +50,6 @@ export function initUI(stage) {
   document.title = `$${TOKEN.ticker} — ${TOKEN.tagline}`;
   $('#ca-value').textContent = hasCA() ? TOKEN.contractAddress : 'Launching soon — set CA in config.js';
   if ($('#link-twitter')) $('#link-twitter').href = TOKEN.links.twitter;
-  if ($('#link-telegram')) $('#link-telegram').href = TOKEN.links.telegram;
 
   // Header charm load segments
   const loadSegs = [];
@@ -610,7 +609,6 @@ export function initUI(stage) {
     if (e.key === 'Escape') {
       docsOverlay?.classList.remove('open');
       forgeOverlay?.classList.remove('open');
-      $('#wallet-overlay')?.classList.remove('open');
     }
   });
   $$('#docs-tabs .gloss-key').forEach((btn) => {

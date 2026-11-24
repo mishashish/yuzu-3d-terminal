@@ -101,6 +101,7 @@ export class FreeAIChat {
     this.ttsAbort = null;
     this.speechSeq = 0;
     this.isSpeakingNow = false;
+    this.ttsAvailable = true;
     this.onSpeakStart = opts.onSpeakStart || null;
     this.onSpeakEnd = opts.onSpeakEnd || null;
 
@@ -150,6 +151,17 @@ export class FreeAIChat {
     }
   }
 
+  _pickCleanVoice() {
+    const all = this.voices.length ? this.voices : (window.speechSynthesis?.getVoices?.() || []);
+    const en = all.filter((v) => v.lang.toLowerCase().startsWith('en'));
+    const prefs = [/aria|jenny|natural|neural|google us/i, /samantha|zira|female/i];
+    for (const re of prefs) {
+      const f = en.find((v) => re.test(v.name));
+      if (f) return f;
+    }
+    return en[0] || all[0] || null;
+  }
+
   async speak(text, { interrupt = true } = {}) {
     if (!this.voiceEnabled) return;
     if (!interrupt && this.isSpeakingNow) return;
@@ -163,45 +175,48 @@ export class FreeAIChat {
     const mySeq = this.speechSeq;
     this.isSpeakingNow = true;
 
-    // 1. Primary: Natural Neural Voice (en-US-AriaNeural via /api/tts)
-    try {
-      const ctrl = new AbortController();
-      this.ttsAbort = ctrl;
-      const timer = setTimeout(() => ctrl.abort(), 9000);
-      const res = await fetch(`/api/tts?text=${encodeURIComponent(clean)}`, { signal: ctrl.signal });
-      clearTimeout(timer);
-      if (mySeq !== this.speechSeq) return;
-      if (res.ok && res.headers.get('content-type')?.includes('audio')) {
-        const blob = await res.blob();
+    // 1. Primary: Local Neural Voice (/api/tts) — auto-disables after a 404 on static/Vercel hosts so zero wasted requests!
+    if (this.ttsAvailable) {
+      try {
+        const ctrl = new AbortController();
+        this.ttsAbort = ctrl;
+        const timer = setTimeout(() => ctrl.abort(), 9000);
+        const res = await fetch(`/api/tts?text=${encodeURIComponent(clean)}`, { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (res.status === 404 || res.status === 405) this.ttsAvailable = false;
         if (mySeq !== this.speechSeq) return;
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        this.currentAudio = audio;
-        audio.onplay = () => { if (mySeq === this.speechSeq) this.onSpeakStart?.(); };
-        audio.onended = () => {
-          URL.revokeObjectURL(url);
-          if (this.currentAudio === audio) this.currentAudio = null;
-          if (mySeq === this.speechSeq) {
-            this.isSpeakingNow = false;
-            this.onSpeakEnd?.();
-          }
-        };
-        audio.onerror = () => {
-          URL.revokeObjectURL(url);
-          if (this.currentAudio === audio) this.currentAudio = null;
-          if (mySeq === this.speechSeq) {
-            this.isSpeakingNow = false;
-            this.onSpeakEnd?.();
-          }
-        };
-        await audio.play();
-        return;
+        if (res.ok && res.headers.get('content-type')?.includes('audio')) {
+          const blob = await res.blob();
+          if (mySeq !== this.speechSeq) return;
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          this.currentAudio = audio;
+          audio.onplay = () => { if (mySeq === this.speechSeq) this.onSpeakStart?.(); };
+          audio.onended = () => {
+            URL.revokeObjectURL(url);
+            if (this.currentAudio === audio) this.currentAudio = null;
+            if (mySeq === this.speechSeq) {
+              this.isSpeakingNow = false;
+              this.onSpeakEnd?.();
+            }
+          };
+          audio.onerror = () => {
+            URL.revokeObjectURL(url);
+            if (this.currentAudio === audio) this.currentAudio = null;
+            if (mySeq === this.speechSeq) {
+              this.isSpeakingNow = false;
+              this.onSpeakEnd?.();
+            }
+          };
+          await audio.play();
+          return;
+        }
+      } catch {
+        if (mySeq !== this.speechSeq) return;
       }
-    } catch {
-      if (mySeq !== this.speechSeq) return;
     }
 
-    // 2. Fallback: Web Speech API
+    // 2. Fallback: Clean female English Web Speech voice
     if (mySeq !== this.speechSeq || !window.speechSynthesis) {
       if (mySeq === this.speechSeq) {
         this.isSpeakingNow = false;
@@ -214,6 +229,8 @@ export class FreeAIChat {
       u.lang = 'en-US';
       u.pitch = 1.06;
       u.rate = 1.0;
+      const v = this._pickCleanVoice();
+      if (v) u.voice = v;
       u.onstart = () => { if (mySeq === this.speechSeq) this.onSpeakStart?.(); };
       u.onend = () => { if (mySeq === this.speechSeq) { this.isSpeakingNow = false; this.onSpeakEnd?.(); } };
       u.onerror = () => { if (mySeq === this.speechSeq) { this.isSpeakingNow = false; this.onSpeakEnd?.(); } };
@@ -255,9 +272,10 @@ export class FreeAIChat {
     const seed = Math.floor(Math.random() * 100000);
     const sysPrompt = this._buildSystemPrompt(extraContext);
 
+    // 1. Primary: Backend /api/chat cascade
     try {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 26000);
+      const timer = setTimeout(() => ctrl.abort(), 18000);
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -276,6 +294,35 @@ export class FreeAIChat {
           this.history.push({ role: 'assistant', content: parsed.text });
           this.speak(parsed.text);
           return { ...parsed, source: data.provider || 'LIVE' };
+        }
+      }
+    } catch {}
+
+    // 2. Client-side direct Pollinations fallback (uses visitor's own residential IP instead of shared Vercel IP!)
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 18000);
+      const res = await fetch('https://text.pollinations.ai/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          model: 'openai',
+          seed,
+          messages: [{ role: 'system', content: sysPrompt }, ...this.history],
+          temperature: 0.85,
+          max_tokens: 750,
+        }),
+      });
+      clearTimeout(timer);
+      if (res.ok) {
+        const data = await res.json();
+        const raw = data?.choices?.[0]?.message?.content;
+        if (raw && raw.trim().length > 0) {
+          const parsed = parseTaggedReply(raw, trimmed);
+          this.history.push({ role: 'assistant', content: parsed.text });
+          this.speak(parsed.text);
+          return { ...parsed, source: 'CLIENT_LIVE' };
         }
       }
     } catch {}
