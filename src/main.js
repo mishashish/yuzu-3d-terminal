@@ -3,6 +3,16 @@ import { TOKEN } from './config.js';
 import { CharacterStage } from './stage.js';
 import { initUI } from './ui.js';
 
+// Ensure browser tab favicon & title always load cleanly even under aggressive browser caching
+if (!document.querySelector('link[rel="icon"]')) {
+  const link = document.createElement('link');
+  link.rel = 'icon';
+  link.type = 'image/png';
+  link.href = '/favicon.png?v=3';
+  document.head.appendChild(link);
+}
+if (!document.title) document.title = '$YUZU® // DIGITAL UNIVERSE 2026';
+
 const loader = document.getElementById('stage-loader');
 const loaderText = document.getElementById('stage-loader-text');
 const speech = document.getElementById('speech');
