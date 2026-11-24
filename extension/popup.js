@@ -1,7 +1,12 @@
-const PAIRS = ['SOLUSDT', 'BTCUSDT', 'ETHUSDT', 'WIFUSDT', 'BONKUSDT', 'PEPEUSDT', 'JUPUSDT'];
 let lastBrief = '';
+let isSpeaking = false;
 
-const fmtPrice = (p) => (p >= 1000 ? `$${Math.round(p)}` : p >= 1 ? `$${p.toFixed(2)}` : `$${p.toFixed(6)}`);
+const fmtPrice = (p) => {
+  if (p >= 1000) return `$${Math.round(p).toLocaleString('en-US')}`;
+  if (p >= 1) return `$${p.toFixed(2)}`;
+  if (p >= 0.01) return `$${p.toFixed(4)}`;
+  return `$${p.toFixed(6)}`;
+};
 
 function buildBrief(market) {
   const sorted = [...market].sort((a, b) => b.pct - a.pct);
@@ -15,7 +20,7 @@ function buildBrief(market) {
   );
 }
 
-function render(market) {
+function render(market, source = '', updatedAt = 0) {
   if (!Array.isArray(market) || !market.length) return;
   const sorted = [...market].sort((a, b) => b.pct - a.pct);
   const best = sorted[0];
@@ -23,6 +28,12 @@ function render(market) {
 
   document.getElementById('top-gainer').textContent = `${best.sym} ${best.pct >= 0 ? '+' : ''}${best.pct.toFixed(1)}%`;
   document.getElementById('top-loser').textContent = `${worst.sym} ${worst.pct.toFixed(1)}%`;
+
+  const metaEl = document.getElementById('feed-meta');
+  if (metaEl) {
+    const secs = updatedAt ? Math.max(0, Math.round((Date.now() - updatedAt) / 1000)) : 0;
+    metaEl.textContent = source ? `${source.toUpperCase()} · ${secs < 5 ? 'NOW' : secs + 'S'}` : 'LIVE 24H';
+  }
 
   lastBrief = buildBrief(market);
   document.getElementById('yuzu-speech').textContent = lastBrief;
@@ -32,46 +43,75 @@ function render(market) {
     .map((m) => {
       const cls = m.pct >= 0 ? 'up' : 'down';
       const sign = m.pct >= 0 ? '+' : '';
-      return `<div class="row"><span class="sym">${m.sym}</span><span class="price">${fmtPrice(m.price)}</span><span class="pct ${cls}">${sign}${m.pct.toFixed(2)}%</span></div>`;
+      const chartUrl = `https://www.tradingview.com/symbols/${m.sym}USDT/`;
+      return `<a class="row" href="${chartUrl}" target="_blank" rel="noopener" title="Open ${m.sym} chart">
+        <span class="sym">${m.sym}</span>
+        <span class="price">${fmtPrice(m.price)}</span>
+        <span class="pct ${cls}">${sign}${m.pct.toFixed(2)}%</span>
+      </a>`;
     })
     .join('');
 }
 
-async function fetchLive() {
+function requestRefresh() {
+  const btn = document.getElementById('btn-refresh');
   const speech = document.getElementById('yuzu-speech');
-  try {
-    const syms = encodeURIComponent(JSON.stringify(PAIRS));
-    const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${syms}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const arr = await res.json();
-    if (!Array.isArray(arr)) throw new Error('Invalid response');
-    const market = arr.map((x) => ({
-      sym: x.symbol.replace('USDT', ''),
-      price: parseFloat(x.lastPrice),
-      pct: parseFloat(x.priceChangePercent),
-    }));
-    await chrome.storage.local.set({ market, updatedAt: Date.now() });
-    chrome.runtime.sendMessage({ type: 'UPDATE_BADGE', market }).catch(() => {});
-    render(market);
-  } catch {
+  btn?.classList.add('spinning');
+
+  chrome.runtime.sendMessage({ type: 'REFRESH_MARKET' }, async (resp) => {
+    btn?.classList.remove('spinning');
+    if (!chrome.runtime.lastError && resp?.ok && resp.market?.length) {
+      render(resp.market, resp.source, resp.updatedAt);
+      return;
+    }
     try {
-      const stored = await chrome.storage.local.get('market');
+      const stored = await chrome.storage.local.get(['market', 'source', 'updatedAt']);
       if (stored.market?.length) {
-        render(stored.market);
+        render(stored.market, stored.source, stored.updatedAt);
       } else if (speech) {
-        speech.textContent = 'Binance feed unreachable right now. Click R to retry.';
+        speech.textContent = 'Live feed unreachable right now. Click R to retry.';
       }
     } catch {}
-  }
+  });
 }
 
-document.getElementById('btn-speak')?.addEventListener('click', () => {
-  if (!lastBrief || !window.speechSynthesis) return;
+function pickCleanEnglishVoice() {
+  const voices = window.speechSynthesis?.getVoices?.() || [];
+  const en = voices.filter((v) => v.lang.toLowerCase().startsWith('en'));
+  const prefs = [/aria|jenny|natural|neural|google us/i, /samantha|zira|female/i];
+  for (const re of prefs) {
+    const f = en.find((v) => re.test(v.name));
+    if (f) return f;
+  }
+  return en[0] || voices[0] || null;
+}
+
+const btnSpeak = document.getElementById('btn-speak');
+const avatarEl = document.getElementById('yuzu-avatar');
+const setSpeakingUI = (on) => {
+  isSpeaking = on;
+  if (btnSpeak) btnSpeak.textContent = on ? 'STOP VOICE' : 'VOICE BRIEF';
+  avatarEl?.classList.toggle('speaking', on);
+};
+
+btnSpeak?.addEventListener('click', () => {
+  if (!window.speechSynthesis) return;
+  if (isSpeaking) {
+    window.speechSynthesis.cancel();
+    setSpeakingUI(false);
+    return;
+  }
+  if (!lastBrief) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(lastBrief);
   u.lang = 'en-US';
   u.pitch = 1.06;
   u.rate = 1.0;
+  const v = pickCleanEnglishVoice();
+  if (v) u.voice = v;
+  u.onstart = () => setSpeakingUI(true);
+  u.onend = () => setSpeakingUI(false);
+  u.onerror = () => setSpeakingUI(false);
   window.speechSynthesis.speak(u);
 });
 
@@ -80,16 +120,38 @@ window.addEventListener('unload', () => {
 });
 
 const btnWidget = document.getElementById('btn-widget');
-chrome.storage.local.get('widgetEnabled').then(({ widgetEnabled }) => {
-  const on = widgetEnabled !== false;
-  if (btnWidget) btnWidget.textContent = on ? 'WIDGET: ON' : 'WIDGET: OFF';
+const btnAlerts = document.getElementById('btn-alerts');
+
+chrome.storage.local.get(['widgetEnabled', 'alertsEnabled', 'market', 'source', 'updatedAt']).then((st) => {
+  const wOn = st.widgetEnabled !== false;
+  const aOn = st.alertsEnabled !== false;
+  if (btnWidget) {
+    btnWidget.textContent = wOn ? 'WIDGET: ON' : 'WIDGET: OFF';
+    btnWidget.classList.toggle('off', !wOn);
+  }
+  if (btnAlerts) {
+    btnAlerts.textContent = aOn ? 'ALERTS: ON' : 'ALERTS: OFF';
+    btnAlerts.classList.toggle('off', !aOn);
+  }
+  // Show cached data immediately so popup feels instant, then refresh in background
+  if (st.market?.length) render(st.market, st.source, st.updatedAt);
+  requestRefresh();
 });
+
 btnWidget?.addEventListener('click', async () => {
   const { widgetEnabled } = await chrome.storage.local.get('widgetEnabled');
   const next = widgetEnabled === false;
   await chrome.storage.local.set({ widgetEnabled: next });
   btnWidget.textContent = next ? 'WIDGET: ON' : 'WIDGET: OFF';
+  btnWidget.classList.toggle('off', !next);
 });
 
-document.getElementById('btn-refresh')?.addEventListener('click', fetchLive);
-fetchLive();
+btnAlerts?.addEventListener('click', async () => {
+  const { alertsEnabled } = await chrome.storage.local.get('alertsEnabled');
+  const next = alertsEnabled === false;
+  await chrome.storage.local.set({ alertsEnabled: next });
+  btnAlerts.textContent = next ? 'ALERTS: ON' : 'ALERTS: OFF';
+  btnAlerts.classList.toggle('off', !next);
+});
+
+document.getElementById('btn-refresh')?.addEventListener('click', requestRefresh);

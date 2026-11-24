@@ -11,11 +11,14 @@
         <span class="dot"></span>
         <b>$YUZU RADAR</b>
       </div>
-      <span class="tag">LIVE 24H</span>
+      <div class="head-right">
+        <span class="tag" id="feed-meta">LIVE 24H</span>
+        <a class="ext-link" href="https://yuzuha-simulator.vercel.app" target="_blank" rel="noopener">3D APP ↗</a>
+      </div>
     </header>
 
     <section class="yuzu-card">
-      <div class="yuzu-avatar">Y</div>
+      <div class="yuzu-avatar" id="yuzu-avatar">Y</div>
       <div class="yuzu-speech" id="yuzu-speech">Fetching live exchange prices...</div>
     </section>
 
@@ -35,7 +38,8 @@
     <footer class="actions">
       <button class="glass-btn pink" id="btn-speak">VOICE BRIEF</button>
       <button class="glass-btn" id="btn-widget">WIDGET: ON</button>
-      <button class="glass-btn" id="btn-refresh">R</button>
+      <button class="glass-btn" id="btn-alerts">ALERTS: ON</button>
+      <button class="glass-btn" id="btn-refresh" title="Refresh live prices">R</button>
     </footer>
 
     <script src="popup.js"></script>

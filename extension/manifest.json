@@ -1,15 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "$YUZU Crypto Companion — Live Pump & Dump Alerts",
-  "version": "1.0.1",
-  "description": "Yuzu live inside your browser: 24h crypto pump & dump radar for SOL, BTC, ETH, WIF, BONK, PEPE, JUP with voice briefs.",
+  "name": "$YUZU Crypto Companion — Live Pump & Dump Radar",
+  "version": "1.1.0",
+  "description": "Yuzu live inside your browser: resilient 24h crypto pump & dump radar (SOL, BTC, ETH, WIF, BONK, PEPE, JUP), voice briefs, alerts & draggable widget.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["storage", "alarms"],
-  "host_permissions": ["https://api.binance.com/*"],
+  "permissions": ["storage", "alarms", "notifications"],
+  "host_permissions": [
+    "https://www.okx.com/*",
+    "https://api.binance.com/*",
+    "https://api.coingecko.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
