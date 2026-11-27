@@ -1,46 +1,57 @@
-# Chrome Web Store Submission Kit — $YUZU Crypto Companion
+# Chrome Web Store Submission Kit — $YUZU Companion v2.2
 
 ## 1. Upload Package
 Upload this ZIP file directly in the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole):
-- **File:** `public/yuzu-chrome-extension.zip` (note: Chrome Web Store expects `manifest.json` at the root of the ZIP — use the script below or zip the contents of `extension/` directly, see `store-assets/yuzu-cws-upload.zip`!).
+- **File:** `store-assets/yuzu-cws-upload.zip` (`manifest.json` at the root of the ZIP).
+- **Direct Site Download Bundle:** `public/yuzu-chrome-extension.zip` (wrapped inside `yuzu-extension/` folder for easy unpacked install).
 
 ## 2. Store Listing Fields
-- **Extension Name:** `$YUZU Crypto Companion — Live Pump & Dump Radar`
+- **Extension Name:** `$YUZU Companion — Crypto Analytics, Token Scanner & Focus Hub`
 - **Short Summary (max 132 chars):**
-  `Live 3D Yuzu crypto companion in Chrome: 24h pump & dump radar for SOL, BTC, ETH, WIF, BONK, PEPE, JUP with voice briefs & alerts.`
-- **Category:** `Productivity` (or `Shopping` / `News & Weather`)
+  `3D Yuzu in Popup & Side Panel: Solana TPS & macro radar, CA RugCheck scanner, watchlist, screen-time analytics, Pomodoro & AI.`
+- **Category:** `Productivity`
 - **Language:** `English`
 - **Homepage URL:** `https://yuzuha-simulator.vercel.app`
 - **Privacy Policy URL:** `https://yuzuha-simulator.vercel.app/privacy.html`
 
 ## 3. Detailed Description
 ```text
-Meet Yuzu — your living 3D Cyber Y2K crypto companion right inside Google Chrome.
+Meet Yuzu v2.2 — your living 3D Cyber Y2K companion in Chrome Popup & Side Panel for crypto macro analytics, on-chain token audits, daily focus, and AI assistance.
 
-KEY FEATURES:
-- Live Mini 3D Companion: Watch Yuzu react to market pumps and dumps with real-time 3D animations and lip-sync inside the extension popup.
-- 24h Pump & Dump Radar: Instant live prices and 24-hour % changes for SOL, BTC, ETH, WIF, BONK, PEPE, and JUP via a resilient 3-tier public feed (OKX, Binance, CoinGecko).
-- Voice Market Briefs: Click VOICE BRIEF and Yuzu reads out the day's top gainer, top loser, and SOL price out loud.
-- Draggable Floating Widget: Keep a sleek live SOL & top-mover pill on any webpage — drag it anywhere, click to expand all 7 coins, or toggle it off anytime.
-- Big Mover Alerts: Optional desktop notifications when any tracked coin moves +/-5% or more (with a 30-minute anti-spam cooldown).
-- Toolbar Badge: Live SOL 24h % badge right on your Chrome toolbar icon.
-- 1-Click TradingView Charts: Click any coin row to jump straight to its live TradingView chart.
+KEY CAPABILITIES:
+1. SIDE PANEL + POPUP + FLOATING WIDGET:
+   - Click "SIDE ◫" to dock 3D Yuzu permanently alongside X/Twitter, DexScreener, or your workspace.
+   - Right-click any highlighted ticker, CA, or tweet -> "Scan with $YUZU" or "Ask Yuzu AI".
+
+2. PULSE (Macro, Solana TPS, Portfolio & Custom Watchlist):
+   - Live Crypto Fear & Greed Index with 7-day sparkline, Solana Mainnet real-time TPS, market breadth, and 24h USD volume.
+   - Local "My Bags" portfolio estimator (100% private, zero wallet connection required).
+   - Pin any on-chain DEX token to your live watchlist and set custom >= / <= $ Price Target Alerts.
+
+3. SCAN CA (On-Chain Token Scanner & Auto-Detector):
+   - Auto-detects Solana contract addresses (CAs) and $TICKERS on X/Twitter and web pages.
+   - 1-click DexScreener + RugCheck v1 audit: Price, MCap, Liquidity, 24h Vol, Vol/MCap ratio, Buy vs Sell pressure bar, 5m/1h/6h/24h momentum, LP lock %, and risk flags.
+
+4. FOCUS (Private Browser Screen-Time Analytics & Pomodoro):
+   - 100% local daily screen-time breakdown across Work/Dev, Crypto/Charts, Social/CT, and Media + Top 5 domains.
+   - Background Pomodoro Focus & Break timer (25m / 45m / 5m) with toolbar badge countdown and session streaks.
+
+5. AI & TOOLS (Multi-Language Copilot, PnL Sizer & Scratchpad):
+   - 1-click Summarize Active Tab, Draft X Reply, Macro Take, and Roast My Day (replies in EN/RU/UA matching your prompt).
+   - Instant SOL <-> USD converter, Position ROI/PnL sizer, and auto-saved Quick Alpha Scratchpad.
 
 100% private: zero tracking, zero ads, zero wallet keys collected.
 ```
 
 ## 4. Privacy Practices Tab (Copy-Paste for Google Review)
 - **Single Purpose Description:**
-  `Displays live 24-hour cryptocurrency prices, market movement notifications, and an interactive 3D companion voice brief for tracked Solana and major crypto assets.`
+  `Provides a popup and side-panel 3D companion combining cryptocurrency market & token analytics, local focus/screen-time tracking, and active-tab AI summarization.`
 - **Permission Justifications:**
-  - `storage`: Stores user preferences (floating widget toggle, alert toggle) and caches the latest public crypto ticker data locally for instant popup rendering.
-  - `alarms`: Polls public cryptocurrency ticker endpoints every 2 minutes to keep the toolbar badge and price cache up to date.
-  - `notifications`: Displays optional desktop alerts when a tracked cryptocurrency moves by 5% or more over 24 hours.
-  - `host_permissions (okx.com, api.binance.com, api.coingecko.com)`: Fetches public, unauthenticated 24h cryptocurrency market ticker data with automatic fallback across exchanges.
+  - `storage`: Stores user preferences, pinned watchlist, price alerts, local portfolio counts, scratchpad notes, Pomodoro state, and local daily domain screen-time counters.
+  - `alarms`: Polls public market ticker endpoints and triggers user-started Pomodoro focus timer completions.
+  - `notifications`: Displays optional desktop alerts for price targets, big market moves, and completed Pomodoro focus sessions.
+  - `activeTab`: Reads visible text or contract addresses on the current tab only when invoked by the user to summarize a page or scan a detected token CA.
+  - `sidePanel`: Allows docking the companion UI in Chrome's native Side Panel when clicked by the user.
+  - `contextMenus`: Adds right-click shortcuts on highlighted text to scan a token ticker/CA or explain selected text in the companion.
+  - `host_permissions (okx.com, api.binance.com, api.coingecko.com, api.dexscreener.com, api.rugcheck.xyz, api.alternative.me, solana-rpc.publicnode.com, yuzuha-simulator.vercel.app)`: Fetches public market/token/Solana RPC analytics and renders the 3D Yuzu companion & AI chat endpoint.
 - **Data Usage Certification:** Check **"I do not collect or use user data"**.
-
-## 5. Graphic Assets Included in `store-assets/`
-- `yuzu-cws-upload.zip` — Root-level manifest ZIP ready for Chrome Web Store upload.
-- `screenshot-1280x800.png` — Store screenshot (`1280×800`).
-- `promo-small-440x280.png` — Small promo tile (`440×280`).
-- `promo-marquee-1400x560.png` — Marquee promo tile (`1400×560`).

@@ -2,23 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>$YUZU Crypto Companion</title>
+    <title>$YUZU Companion v2.2</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <header class="head">
       <div class="brand">
-        <span class="dot"></span>
-        <b>$YUZU RADAR</b>
+        <span class="dot" id="status-dot"></span>
+        <b>$YUZU</b>
+        <span class="ver-pill">v2.2</span>
       </div>
       <div class="head-right">
         <span class="tag" id="feed-meta">LIVE 24H</span>
+        <button class="mini-toggle-btn" id="btn-open-sidepanel" title="Dock Yuzu in Chrome Side Panel">SIDE ◫</button>
+        <button class="mini-toggle-btn" id="btn-toggle-3d" title="Toggle compact 3D stage">3D ▾</button>
         <a class="ext-link" href="https://yuzuha-simulator.vercel.app" target="_blank" rel="noopener">3D APP ↗</a>
       </div>
     </header>
 
-    <!-- Live Mini 3D Yuzu Stage + Speech Bubble -->
-    <section class="mini-stage-card">
+    <!-- Live Mini 3D Yuzu Stage + Dynamic Speech Bubble -->
+    <section class="mini-stage-card" id="mini-stage-card">
       <div class="mini-3d-wrap" id="mini-3d-wrap">
         <div class="mini-boot"><span>$YUZU 3D // BOOTING...</span></div>
         <iframe
@@ -27,27 +30,269 @@
           title="Yuzu 3D Companion"
         ></iframe>
       </div>
-      <div class="yuzu-speech" id="yuzu-speech">Fetching live exchange prices...</div>
+      <div class="yuzu-speech" id="yuzu-speech">Syncing live analytics &amp; Solana telemetry...</div>
     </section>
 
-    <section class="highlights">
-      <div class="hl up">
-        <span class="micro" id="lbl-gainer">TOP GAINER</span>
-        <b id="top-gainer">—</b>
-      </div>
-      <div class="hl down">
-        <span class="micro">TOP LOSER</span>
-        <b id="top-loser">—</b>
-      </div>
-    </section>
+    <!-- 4-Tab Navigation -->
+    <nav class="tabs" id="main-tabs">
+      <button class="tab-btn active" data-tab="pulse">PULSE</button>
+      <button class="tab-btn" data-tab="scan">SCAN CA</button>
+      <button class="tab-btn" data-tab="focus">FOCUS</button>
+      <button class="tab-btn" data-tab="ai">AI &amp; TOOLS</button>
+    </nav>
 
-    <section class="list" id="coin-list"></section>
+    <!-- ========================================================= -->
+    <!-- TAB 1: PULSE (Macro + Solana TPS + Portfolio + Watchlist) -->
+    <!-- ========================================================= -->
+    <main class="tab-panel active" id="tab-pulse">
+      <section class="macro-grid">
+        <div class="macro-card fg-card">
+          <div class="macro-top">
+            <span class="micro">FEAR &amp; GREED</span>
+            <b id="fg-label" class="fg-val">—</b>
+          </div>
+          <div class="fg-visual-row">
+            <div class="fg-bar-track">
+              <div class="fg-bar-fill" id="fg-bar-fill" style="width: 50%"></div>
+            </div>
+            <svg id="fg-sparkline" class="spark-svg" viewBox="0 0 56 16" preserveAspectRatio="none"></svg>
+          </div>
+        </div>
+        <div class="macro-card">
+          <div class="macro-top">
+            <span class="micro">SOLANA / BREADTH</span>
+            <span class="tps-pill" id="sol-tps-pill">⚡ — TPS</span>
+          </div>
+          <b id="macro-breadth" class="cyan-txt">—</b>
+          <span class="sub-micro" id="macro-vol">Vol —</span>
+        </div>
+      </section>
+
+      <!-- Collapsible Local Portfolio Value Strip -->
+      <section class="sub-card bag-card">
+        <div class="sub-head">
+          <div>
+            <span class="micro">💼 MY BAGS (LOCAL)</span>
+            <b id="bag-total-val" class="bag-val">$0.00</b>
+            <span id="bag-24h-pnl" class="sub-micro">—</span>
+          </div>
+          <button class="mini-toggle-btn" id="btn-edit-bags">EDIT</button>
+        </div>
+        <div id="bag-editor" class="bag-editor" style="display: none">
+          <div class="bag-inputs-grid" id="bag-inputs-grid"></div>
+          <span class="sub-micro">Stored 100% locally in Chrome — zero wallet keys needed.</span>
+        </div>
+      </section>
+
+      <section class="highlights">
+        <div class="hl up">
+          <span class="micro" id="lbl-gainer">TOP GAINER</span>
+          <b id="top-gainer">—</b>
+        </div>
+        <div class="hl down">
+          <span class="micro">TOP LOSER</span>
+          <b id="top-loser">—</b>
+        </div>
+      </section>
+
+      <section class="list" id="coin-list"></section>
+
+      <!-- Pinned On-Chain Watchlist Gems -->
+      <section class="sub-card" id="pinned-watchlist-box" style="display: none">
+        <div class="sub-head">
+          <span class="micro cyan-txt">★ PINNED ON-CHAIN WATCHLIST</span>
+          <span class="sub-micro" id="pinned-count-lbl">0 pinned</span>
+        </div>
+        <div class="list" id="pinned-list"></div>
+      </section>
+
+      <!-- Custom Price Target Alert Builder -->
+      <section class="sub-card alert-builder">
+        <div class="sub-head">
+          <span class="micro">🎯 PRICE TARGET ALERTS</span>
+          <span class="sub-micro" id="alert-count-lbl">0 active</span>
+        </div>
+        <div class="alert-form">
+          <select id="alert-sym" class="cyber-input sm">
+            <option value="SOL">SOL</option>
+            <option value="BTC">BTC</option>
+            <option value="ETH">ETH</option>
+            <option value="WIF">WIF</option>
+            <option value="BONK">BONK</option>
+            <option value="PEPE">PEPE</option>
+            <option value="JUP">JUP</option>
+          </select>
+          <select id="alert-cond" class="cyber-input sm">
+            <option value="above">≥ Above</option>
+            <option value="below">≤ Below</option>
+          </select>
+          <input id="alert-target" type="number" step="any" placeholder="Target $" class="cyber-input" />
+          <button id="btn-add-alert" class="mini-action-btn pink">SET</button>
+        </div>
+        <div id="alert-pills" class="chip-wrap"></div>
+      </section>
+    </main>
+
+    <!-- ========================================================= -->
+    <!-- TAB 2: SCAN CA (DexScreener + RugCheck + Pin Watchlist)   -->
+    <!-- ========================================================= -->
+    <main class="tab-panel" id="tab-scan">
+      <section class="search-row">
+        <input
+          id="scan-input"
+          type="text"
+          placeholder="Paste Solana CA or $TICKER (press / to focus)..."
+          class="cyber-input"
+          spellcheck="false"
+        />
+        <button id="btn-scan-go" class="mini-action-btn pink">SCAN</button>
+      </section>
+
+      <section class="detected-box" id="page-detected-box" style="display: none">
+        <span class="micro cyan-txt">⚡ DETECTED ON THIS TAB (CLICK TO AUDIT)</span>
+        <div class="chip-wrap" id="page-detected-chips"></div>
+      </section>
+
+      <section class="detected-box" id="recent-scans-box" style="display: none">
+        <span class="micro">RECENT SCANS</span>
+        <div class="chip-wrap" id="recent-scan-chips"></div>
+      </section>
+
+      <section id="scan-result-card" class="scan-card">
+        <div class="empty-hint">
+          Paste any Solana contract address or ticker above — or highlight any CA on X/Twitter, right-click &rarr; <b>Scan with $YUZU</b> for instant liquidity, buy/sell pressure &amp; RugCheck audit.
+        </div>
+      </section>
+    </main>
+
+    <!-- ========================================================= -->
+    <!-- TAB 3: FOCUS (Web Screen-Time Analytics + Pomodoro Timer) -->
+    <!-- ========================================================= -->
+    <main class="tab-panel" id="tab-focus">
+      <section class="sub-card focus-timer-card">
+        <div class="focus-top">
+          <div>
+            <span class="micro" id="focus-mode-lbl">POMODORO // DEEP FOCUS</span>
+            <div class="timer-digits" id="focus-timer-display">25:00</div>
+          </div>
+          <div class="focus-presets">
+            <button class="chip-btn active" data-fmin="25" data-fmode="focus">25m</button>
+            <button class="chip-btn" data-fmin="45" data-fmode="focus">45m</button>
+            <button class="chip-btn" data-fmin="5" data-fmode="break">5m Break</button>
+          </div>
+        </div>
+        <div class="focus-bottom">
+          <span class="sub-micro lime-txt" id="focus-streak-lbl">⚡ 0 sessions · 0m focused today</span>
+          <button class="mini-action-btn pink" id="btn-focus-toggle">START FOCUS</button>
+        </div>
+      </section>
+
+      <section class="sub-card">
+        <div class="sub-head">
+          <span class="micro">📊 TODAY'S BROWSER ANALYTICS</span>
+          <b class="cyan-txt" id="web-total-time">0m today</b>
+        </div>
+        <div class="cat-stack-bar" id="cat-stack-bar">
+          <span style="width: 25%; background: #72e7ff"></span>
+          <span style="width: 25%; background: #b8ff65"></span>
+          <span style="width: 25%; background: #ff8bcb"></span>
+          <span style="width: 25%; background: #a66bff"></span>
+        </div>
+        <div class="cat-legend" id="cat-legend"></div>
+      </section>
+
+      <section class="sub-card">
+        <div class="sub-head">
+          <span class="micro">TOP SITES TODAY (LOCAL &amp; PRIVATE)</span>
+          <button class="link-btn" id="btn-reset-webstats" title="Reset today's local web timer">RESET</button>
+        </div>
+        <div id="top-domains-list" class="domain-list"></div>
+      </section>
+    </main>
+
+    <!-- ========================================================= -->
+    <!-- TAB 4: AI & TOOLS (Copilot + PnL Sizer + Scratchpad)      -->
+    <!-- ========================================================= -->
+    <main class="tab-panel" id="tab-ai">
+      <section class="sub-card">
+        <div class="sub-head">
+          <span class="micro">✨ YUZU AI COPILOT (EN / RU / UA)</span>
+          <span class="sub-micro" id="ai-tab-host">Ready</span>
+        </div>
+        <div class="quick-ai-grid">
+          <button class="chip-btn" data-ai-act="summarize">📄 Summarize Tab</button>
+          <button class="chip-btn" data-ai-act="xreply">✍️ Draft X Reply</button>
+          <button class="chip-btn" data-ai-act="market">📊 Macro Take</button>
+          <button class="chip-btn" data-ai-act="roast">🔥 Roast My Day</button>
+        </div>
+        <div class="search-row" style="margin-top: 4px">
+          <input id="ai-prompt-input" type="text" placeholder="Ask Yuzu in English or Russian..." class="cyber-input" />
+          <button id="btn-ai-send" class="mini-action-btn pink">ASK</button>
+        </div>
+        <div class="ai-output-box" id="ai-output-box">
+          <span id="ai-output-text" class="ai-placeholder">Pick a 1-click action above, right-click any text on the web, or ask Yuzu anything directly.</span>
+          <div class="ai-out-actions" id="ai-out-actions" style="display: none">
+            <button class="chip-btn" id="btn-ai-copy">COPY</button>
+            <button class="chip-btn" id="btn-ai-speak">SPEAK</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="sub-card">
+        <div class="sub-head">
+          <span class="micro">🧮 QUICK SOL CONVERTER &amp; PNL SIZER</span>
+          <span class="sub-micro" id="calc-sol-rate">1 SOL = —</span>
+        </div>
+        <div class="calc-conv-row">
+          <div class="calc-field">
+            <label>SOL</label>
+            <input id="conv-sol" type="number" step="any" value="1" class="cyber-input" />
+          </div>
+          <span class="swap-eq">⇄</span>
+          <div class="calc-field">
+            <label>USD ($)</label>
+            <input id="conv-usd" type="number" step="any" placeholder="0.00" class="cyber-input" />
+          </div>
+        </div>
+        <div class="pnl-grid">
+          <div class="calc-field">
+            <label>SIZE ($)</label>
+            <input id="pnl-size" type="number" step="any" value="250" class="cyber-input" />
+          </div>
+          <div class="calc-field">
+            <label>ENTRY ($)</label>
+            <input id="pnl-entry" type="number" step="any" value="100" class="cyber-input" />
+          </div>
+          <div class="calc-field">
+            <label>TARGET ($)</label>
+            <input id="pnl-target" type="number" step="any" value="150" class="cyber-input" />
+          </div>
+        </div>
+        <div class="pnl-result" id="pnl-result">ROI: +50.0% · Net PnL: +$125.00</div>
+      </section>
+
+      <section class="sub-card">
+        <div class="sub-head">
+          <span class="micro">📝 QUICK ALPHA SCRATCHPAD (AUTO-SAVED)</span>
+          <div style="display: flex; gap: 6px">
+            <button class="link-btn" id="btn-copy-notes" style="color: #72e7ff">COPY</button>
+            <button class="link-btn" id="btn-clear-notes">CLEAR</button>
+          </div>
+        </div>
+        <textarea
+          id="alpha-notes"
+          rows="3"
+          class="cyber-input notes-area"
+          placeholder="Jot down CAs, wallet labels, entry levels, or tweet ideas..."
+        ></textarea>
+      </section>
+    </main>
 
     <footer class="actions">
       <button class="glass-btn pink" id="btn-speak">VOICE BRIEF</button>
       <button class="glass-btn" id="btn-widget">WIDGET: ON</button>
       <button class="glass-btn" id="btn-alerts">ALERTS: ON</button>
-      <button class="glass-btn" id="btn-refresh" title="Refresh live prices">R</button>
+      <button class="glass-btn" id="btn-refresh" title="Refresh live data">↻</button>
     </footer>
 
     <script src="popup.js"></script>

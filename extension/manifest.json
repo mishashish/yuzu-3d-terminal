@@ -1,26 +1,40 @@
 {
   "manifest_version": 3,
-  "name": "$YUZU Crypto Companion — Live Pump & Dump Radar",
-  "version": "1.2.1",
-  "description": "Yuzu live inside your browser: resilient 24h crypto pump & dump radar (SOL, BTC, ETH, WIF, BONK, PEPE, JUP), voice briefs, alerts & draggable widget.",
+  "name": "$YUZU Companion — Crypto Analytics, Token Scanner & Focus Hub",
+  "version": "2.2.0",
+  "description": "Living 3D Yuzu companion in Popup & Side Panel: Solana TPS & Fear/Greed macro, CA scanner & RugCheck audit, pinned watchlist, screen-time analytics, Pomodoro & AI.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["storage", "alarms", "notifications"],
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications",
+    "activeTab",
+    "sidePanel",
+    "contextMenus"
+  ],
   "host_permissions": [
     "https://yuzuha-simulator.vercel.app/*",
     "https://www.okx.com/*",
     "https://api.binance.com/*",
-    "https://api.coingecko.com/*"
+    "https://api.coingecko.com/*",
+    "https://api.dexscreener.com/*",
+    "https://api.rugcheck.xyz/*",
+    "https://api.alternative.me/*",
+    "https://solana-rpc.publicnode.com/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
+  "side_panel": {
+    "default_path": "popup.html"
+  },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "$YUZU Crypto Radar",
+    "default_title": "$YUZU Companion v2.2",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
