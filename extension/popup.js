@@ -10,7 +10,7 @@ let currentScanToken = null;
 let activePageCtx = null;
 let selectedFocusMin = 25;
 let selectedFocusMode = 'focus';
-let stageMode = 'full';
+let stageMode = 'strip'; // 'strip' | 'expanded' | 'collapsed'
 let aiHistory = [];
 
 const BAG_COINS = ['SOL', 'BTC', 'ETH', 'JUP'];
@@ -20,7 +20,6 @@ const stageWrap = document.getElementById('mini-3d-wrap');
 const stageCard = document.getElementById('mini-stage-card');
 const speechEl = document.getElementById('yuzu-speech');
 
-// Detect Chrome Side Panel context (taller viewport than standard popup)
 function checkSidePanelMode() {
   if (window.innerHeight > 605 || window.innerWidth > 420) {
     document.body.classList.add('sidepanel-mode');
@@ -36,6 +35,13 @@ function todayKey() {
 
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function stripEmojis(str) {
+  return String(str ?? '')
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
 function fmtPrice(p) {
@@ -75,13 +81,14 @@ function fmtDuration(sec) {
 }
 
 function shortCA(a) {
-  return a && a.length > 12 ? `${a.slice(0, 5)}…${a.slice(-4)}` : a || '';
+  return a && a.length > 12 ? `${a.slice(0, 5)}...${a.slice(-4)}` : a || '';
 }
 
 function setYuzuLine(text, pose = null) {
-  if (text && speechEl) {
-    speechEl.textContent = text;
-    lastBrief = text;
+  const clean = stripEmojis(text);
+  if (clean && speechEl) {
+    speechEl.textContent = clean;
+    lastBrief = clean;
   }
   if (pose) {
     lastPose = pose;
@@ -90,7 +97,7 @@ function setYuzuLine(text, pose = null) {
 }
 
 // =========================================================================
-// MINI 3D STAGE BRIDGE, SIDE PANEL LAUNCHER & KEYBOARD SHORTCUTS
+// MINI 3D STAGE BRIDGE, SIDE PANEL & KEYBOARD SHORTCUTS
 // =========================================================================
 function notify3D(payload) {
   if (!miniReady) return;
@@ -125,17 +132,19 @@ document.getElementById('btn-open-sidepanel')?.addEventListener('click', async (
 
 const btnToggle3D = document.getElementById('btn-toggle-3d');
 function applyStageMode(mode) {
-  stageMode = mode;
-  stageCard?.classList.remove('compact', 'collapsed');
-  if (mode === 'compact') stageCard?.classList.add('compact');
-  if (mode === 'collapsed') stageCard?.classList.add('collapsed');
+  const valid = mode === 'expanded' || mode === 'collapsed' ? mode : 'strip';
+  stageMode = valid;
+  stageCard?.classList.remove('expanded', 'collapsed');
+  if (valid === 'expanded') stageCard?.classList.add('expanded');
+  if (valid === 'collapsed') stageCard?.classList.add('collapsed');
   if (btnToggle3D) {
-    btnToggle3D.textContent = mode === 'full' ? '3D ▾' : mode === 'compact' ? '3D ▸' : '3D ▴';
+    btnToggle3D.textContent = valid === 'collapsed' ? '3D OFF' : '3D';
+    btnToggle3D.classList.toggle('active', valid === 'expanded');
   }
 }
 
 btnToggle3D?.addEventListener('click', () => {
-  const next = stageMode === 'full' ? 'compact' : stageMode === 'compact' ? 'collapsed' : 'full';
+  const next = stageMode === 'strip' ? 'expanded' : stageMode === 'expanded' ? 'collapsed' : 'strip';
   applyStageMode(next);
   chrome.storage.local.set({ stageMode: next });
 });
@@ -143,9 +152,6 @@ btnToggle3D?.addEventListener('click', () => {
 function switchTab(tabName) {
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.getAttribute('data-tab') === tabName));
   document.querySelectorAll('.tab-panel').forEach((p) => p.classList.toggle('active', p.id === `tab-${tabName}`));
-  if (stageMode !== 'collapsed') {
-    applyStageMode(tabName === 'pulse' ? 'full' : 'compact');
-  }
   if (tabName === 'focus') renderFocusAndWebStats();
   if (tabName === 'scan') probeActiveTabContext();
 }
@@ -154,7 +160,18 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
   btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
 });
 
-// Keyboard shortcuts: '/' focuses scanner, Alt+1..4 switches tabs
+// Sub-tool switcher in Tab 4
+document.querySelectorAll('.subtab-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const target = btn.getAttribute('data-subtool');
+    document.querySelectorAll('.subtab-btn').forEach((b) => b.classList.toggle('active', b === btn));
+    const calcPane = document.getElementById('subtool-calc');
+    const notesPane = document.getElementById('subtool-notes');
+    if (calcPane) calcPane.style.display = target === 'calc' ? 'flex' : 'none';
+    if (notesPane) notesPane.style.display = target === 'notes' ? 'flex' : 'none';
+  });
+});
+
 window.addEventListener('keydown', (e) => {
   const tag = document.activeElement?.tagName;
   const inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
@@ -193,7 +210,7 @@ function pickCleanEnglishVoice() {
 const btnSpeak = document.getElementById('btn-speak');
 function setSpeakingUI(on) {
   isSpeaking = on;
-  if (btnSpeak) btnSpeak.textContent = on ? 'STOP VOICE' : 'VOICE BRIEF';
+  if (btnSpeak) btnSpeak.textContent = on ? 'STOP' : 'SPEAK';
   stageWrap?.classList.toggle('speaking', on);
   notify3D({ type: 'YUZU_SPEAK', speaking: on, pose: lastPose });
 }
@@ -206,9 +223,10 @@ function speakText(text) {
     return;
   }
   window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = /[а-яіїєґё]/i.test(text) ? 'ru-RU' : 'en-US';
-  u.pitch = 1.06;
+  const clean = stripEmojis(text);
+  const u = new SpeechSynthesisUtterance(clean);
+  u.lang = /[а-яіїєґё]/i.test(clean) ? 'ru-RU' : 'en-US';
+  u.pitch = 1.05;
   u.rate = 1.01;
   if (u.lang === 'en-US') {
     const v = pickCleanEnglishVoice();
@@ -228,7 +246,7 @@ window.addEventListener('pagehide', () => {
 });
 
 // =========================================================================
-// TAB 1: PULSE (MACRO + SPARKLINE + SOL TPS + BAGS + WATCHLIST + ALERTS)
+// TAB 1: MARKET (KPI STRIP + PORTFOLIO + TABLE + WATCHLIST + ALERTS)
 // =========================================================================
 function renderFGSparkline(history) {
   const svg = document.getElementById('fg-sparkline');
@@ -238,14 +256,14 @@ function renderFGSparkline(history) {
   const span = Math.max(1, maxV - minV);
   const pts = history
     .map((v, idx) => {
-      const x = (idx / (history.length - 1)) * 56;
-      const y = 14 - ((v - minV) / span) * 12;
+      const x = (idx / (history.length - 1)) * 46;
+      const y = 13 - ((v - minV) / span) * 11;
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(' ');
   const lastVal = history[history.length - 1];
-  const stroke = lastVal >= 55 ? '#b8ff65' : lastVal <= 40 ? '#ff8bcb' : '#72e7ff';
-  svg.innerHTML = `<polyline fill="none" stroke="${stroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" points="${pts}" />`;
+  const stroke = lastVal >= 55 ? '#c8ff78' : lastVal <= 40 ? '#f87171' : '#9be8ff';
+  svg.innerHTML = `<polyline fill="none" stroke="${stroke}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" points="${pts}" />`;
 }
 
 function buildBrief(market, fg, solNet) {
@@ -253,14 +271,14 @@ function buildBrief(market, fg, solNet) {
   const best = sorted[0];
   const worst = sorted[sorted.length - 1];
   const sol = market.find((m) => m.sym === 'SOL');
-  const fgPart = fg ? `Sentiment is ${fg.value} (${fg.label}). ` : '';
-  const tpsPart = solNet?.tps ? `Solana running at ${solNet.tps.toLocaleString()} TPS. ` : '';
+  const fgPart = fg ? `Sentiment ${fg.value} (${fg.label}). ` : '';
+  const tpsPart = solNet?.tps ? `Solana ${solNet.tps.toLocaleString()} TPS.` : '';
   const leadText =
     best.pct >= 0
-      ? `${best.sym} leads at +${best.pct.toFixed(1)}%`
-      : `Strongest hold is ${best.sym} (${best.pct.toFixed(1)}%)`;
+      ? `${best.sym} leads +${best.pct.toFixed(1)}%`
+      : `${best.sym} holds best (${best.pct.toFixed(1)}%)`;
   lastPose = best.pct > 2.5 ? 'dance' : worst.pct < -4 ? 'pout' : 'peace';
-  return `${fgPart}${leadText}, ${worst.sym} at ${worst.pct.toFixed(1)}%. SOL is ${sol ? fmtPrice(sol.price) : '—'}. ${tpsPart}`.trim();
+  return `${fgPart}${leadText}, ${worst.sym} ${worst.pct.toFixed(1)}%. SOL ${sol ? fmtPrice(sol.price) : '—'}. ${tpsPart}`.trim();
 }
 
 function renderPulse(market, source = '', updatedAt = 0, fg = null, solNet = null, pinned = null) {
@@ -270,37 +288,34 @@ function renderPulse(market, source = '', updatedAt = 0, fg = null, solNet = nul
   if (solNet) currentSolNet = solNet;
   if (Array.isArray(pinned)) currentPinned = pinned;
 
-  const sorted = [...market].sort((a, b) => b.pct - a.pct);
-  const best = sorted[0];
-  const worst = sorted[sorted.length - 1];
-
-  const lblGainer = document.getElementById('lbl-gainer');
-  if (lblGainer) lblGainer.textContent = best.pct >= 0 ? 'TOP GAINER' : 'STRONGEST';
-  document.getElementById('top-gainer').textContent = `${best.sym} ${best.pct >= 0 ? '+' : ''}${best.pct.toFixed(1)}%`;
-  document.getElementById('top-loser').textContent = `${worst.sym} ${worst.pct.toFixed(1)}%`;
-
-  // Macro Breadth, Volume & Solana TPS
   const upCount = market.filter((m) => m.pct >= 0).length;
   const downCount = market.length - upCount;
   const totalVol = market.reduce((s, m) => s + (Number(m.volUsd) || 0), 0);
+
   const breadthEl = document.getElementById('macro-breadth');
   const volEl = document.getElementById('macro-vol');
   const tpsEl = document.getElementById('sol-tps-pill');
-  if (breadthEl) breadthEl.textContent = `${upCount} UP / ${downCount} DOWN`;
-  if (volEl) volEl.textContent = totalVol > 0 ? `24h Vol ${fmtCompactUsd(totalVol)}` : 'Spot Majors';
+  const tpsStatusEl = document.getElementById('sol-net-status');
+
+  if (breadthEl) breadthEl.textContent = `${upCount} UP / ${downCount} DN`;
+  if (volEl) volEl.textContent = totalVol > 0 ? `Vol ${fmtCompactUsd(totalVol)}` : '24h Spot';
   if (tpsEl && currentSolNet?.tps) {
-    tpsEl.textContent = `⚡ ${currentSolNet.tps.toLocaleString()} TPS`;
-    tpsEl.title = `Solana Mainnet: ${currentSolNet.status}`;
+    tpsEl.textContent = `${currentSolNet.tps.toLocaleString()} TPS`;
+  }
+  if (tpsStatusEl && currentSolNet?.status) {
+    tpsStatusEl.textContent = `Mainnet ${currentSolNet.status}`;
   }
 
-  // Fear & Greed + 7D Sparkline
   if (currentFG) {
+    const fgScore = document.getElementById('fg-score');
     const fgLabel = document.getElementById('fg-label');
     const fgFill = document.getElementById('fg-bar-fill');
-    if (fgLabel) {
-      fgLabel.textContent = `${currentFG.value} · ${currentFG.label.toUpperCase()}`;
-      fgLabel.style.color = currentFG.value >= 55 ? '#b8ff65' : currentFG.value <= 40 ? '#ff8bcb' : '#72e7ff';
+    const col = currentFG.value >= 55 ? '#c8ff78' : currentFG.value <= 40 ? '#f87171' : '#9be8ff';
+    if (fgScore) {
+      fgScore.textContent = String(currentFG.value);
+      fgScore.style.color = col;
     }
+    if (fgLabel) fgLabel.textContent = currentFG.label;
     if (fgFill) fgFill.style.width = `${Math.min(100, Math.max(4, currentFG.value))}%`;
     renderFGSparkline(currentFG.history);
   }
@@ -308,7 +323,7 @@ function renderPulse(market, source = '', updatedAt = 0, fg = null, solNet = nul
   const metaEl = document.getElementById('feed-meta');
   if (metaEl) {
     const secs = updatedAt ? Math.max(0, Math.round((Date.now() - updatedAt) / 1000)) : 0;
-    metaEl.textContent = source ? `${source.toUpperCase()} · ${secs < 5 ? 'NOW' : secs + 'S'}` : 'LIVE 24H';
+    metaEl.textContent = source ? `${source.toUpperCase()} · ${secs < 5 ? 'LIVE' : secs + 'S'}` : 'LIVE';
   }
 
   const activeTab = document.querySelector('.tab-btn.active')?.getAttribute('data-tab');
@@ -323,17 +338,19 @@ function renderPulse(market, source = '', updatedAt = 0, fg = null, solNet = nul
       const sign = m.pct >= 0 ? '+' : '';
       const chartUrl = `https://www.tradingview.com/symbols/${m.sym}USDT/`;
       const span = (m.high24h || 0) - (m.low24h || 0);
-      const posPct = span > 0 ? Math.min(96, Math.max(4, ((m.price - m.low24h) / span) * 100)) : 50;
-      const volTxt = m.volUsd > 0 ? `Vol ${fmtCompactUsd(m.volUsd)}` : '24h range';
+      const posPct = span > 0 ? Math.min(95, Math.max(5, ((m.price - m.low24h) / span) * 100)) : 50;
+      const volTxt = m.volUsd > 0 ? fmtCompactUsd(m.volUsd) : '24h';
       return `<div class="row">
-        <a class="row-link sym" href="${chartUrl}" target="_blank" rel="noopener" title="Open ${esc(m.sym)} TradingView chart">${esc(m.sym)}</a>
-        <div class="range-col" title="24h Low: ${fmtPrice(m.low24h)} — High: ${fmtPrice(m.high24h)}">
-          <div class="range-bar"><span class="range-dot" style="left:${posPct.toFixed(0)}%"></span></div>
-          <span class="vol-lbl">${volTxt}</span>
+        <div class="asset-cell">
+          <a class="row-link" href="${chartUrl}" target="_blank" rel="noopener" title="Open ${esc(m.sym)} chart">${esc(m.sym)}</a>
+          <span class="vol-sub">${volTxt}</span>
         </div>
-        <span class="price">${fmtPrice(m.price)}</span>
-        <span class="pct ${cls}">${sign}${m.pct.toFixed(2)}%</span>
-        <button class="bell-btn" data-pick-alert="${esc(m.sym)}" data-pick-price="${m.price}" title="Set price alert for ${esc(m.sym)}">🔔</button>
+        <div class="range-track" title="Low ${fmtPrice(m.low24h)} — High ${fmtPrice(m.high24h)}">
+          <span class="range-thumb" style="left:${posPct.toFixed(0)}%"></span>
+        </div>
+        <span class="price-cell">${fmtPrice(m.price)}</span>
+        <span class="pct-pill ${cls}">${sign}${m.pct.toFixed(2)}%</span>
+        <button class="row-act-btn" data-pick-alert="${esc(m.sym)}" data-pick-price="${m.price}" title="Set price alert">+</button>
       </div>`;
     })
     .join('');
@@ -360,7 +377,7 @@ function renderPulse(market, source = '', updatedAt = 0, fg = null, solNet = nul
   if (sol?.price) syncSolConverter(sol.price);
 }
 
-// Local Portfolio / Bags Estimator
+// Portfolio Estimator
 async function initPortfolioEditor() {
   const { userBags = {} } = await chrome.storage.local.get('userBags');
   const grid = document.getElementById('bag-inputs-grid');
@@ -368,7 +385,7 @@ async function initPortfolioEditor() {
     grid.innerHTML = BAG_COINS.map(
       (sym) => `<div class="calc-field">
         <label>${sym}</label>
-        <input type="number" step="any" min="0" placeholder="0" data-bag-sym="${sym}" value="${userBags[sym] || ''}" class="cyber-input" />
+        <input type="number" step="any" min="0" placeholder="0" data-bag-sym="${sym}" value="${userBags[sym] || ''}" class="field" />
       </div>`
     ).join('');
 
@@ -409,14 +426,14 @@ async function renderPortfolioValue() {
 
   totalEl.textContent = `$${totalNow.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (totalNow <= 0) {
-    pnlEl.textContent = 'Click EDIT to track holdings';
-    pnlEl.style.color = 'rgba(217,217,232,0.65)';
+    pnlEl.textContent = 'No holdings set';
+    pnlEl.style.color = '#7c899e';
   } else {
     const diff = totalNow - totalPrev;
     const pct = totalPrev > 0 ? (diff / totalPrev) * 100 : 0;
     const sign = diff >= 0 ? '+' : '-';
-    pnlEl.textContent = `${sign}$${Math.abs(diff).toFixed(2)} (${diff >= 0 ? '+' : ''}${pct.toFixed(1)}% 24h)`;
-    pnlEl.style.color = diff >= 0 ? '#b8ff65' : '#ff8bcb';
+    pnlEl.textContent = `${sign}$${Math.abs(diff).toFixed(2)} (${diff >= 0 ? '+' : ''}${pct.toFixed(1)}%)`;
+    pnlEl.style.color = diff >= 0 ? '#c8ff78' : '#f87171';
   }
 }
 
@@ -425,7 +442,7 @@ document.getElementById('btn-edit-bags')?.addEventListener('click', (e) => {
   if (!ed) return;
   const open = ed.style.display === 'none';
   ed.style.display = open ? 'flex' : 'none';
-  e.currentTarget.textContent = open ? 'DONE' : 'EDIT';
+  e.currentTarget.textContent = open ? 'CLOSE' : 'EDIT';
 });
 
 // Pinned On-Chain Watchlist
@@ -442,7 +459,7 @@ async function renderPinnedWatchlist() {
     return;
   }
   box.style.display = 'flex';
-  if (cnt) cnt.textContent = `${pinnedTokens.length} pinned`;
+  if (cnt) cnt.textContent = `${pinnedTokens.length} ${pinnedTokens.length === 1 ? 'token' : 'tokens'}`;
 
   list.innerHTML = pinnedTokens
     .map((t) => {
@@ -450,11 +467,14 @@ async function renderPinnedWatchlist() {
       const cls = pct >= 0 ? 'up' : 'down';
       const sign = pct >= 0 ? '+' : '';
       return `<div class="row">
-        <button class="row-link sym" data-open-scan="${esc(t.address)}" title="Audit $${esc(t.symbol)}">$${esc(t.symbol)}</button>
-        <span class="vol-lbl">Liq ${fmtCompactUsd(t.liquidityUsd || 0)}</span>
-        <span class="price">${fmtPrice(t.priceUsd)}</span>
-        <span class="pct ${cls}">${sign}${pct.toFixed(1)}%</span>
-        <button class="bell-btn" data-unpin="${esc(t.address)}" title="Unpin token">×</button>
+        <div class="asset-cell">
+          <button class="row-link" data-open-scan="${esc(t.address)}" title="Inspect ${esc(t.symbol)}">${esc(t.symbol)}</button>
+          <span class="vol-sub">Liq ${fmtCompactUsd(t.liquidityUsd || 0)}</span>
+        </div>
+        <span class="vol-sub">${esc(shortCA(t.address))}</span>
+        <span class="price-cell">${fmtPrice(t.priceUsd)}</span>
+        <span class="pct-pill ${cls}">${sign}${pct.toFixed(1)}%</span>
+        <button class="row-act-btn" data-unpin="${esc(t.address)}" title="Remove from watchlist">×</button>
       </div>`;
     })
     .join('');
@@ -477,7 +497,7 @@ async function renderPinnedWatchlist() {
   });
 }
 
-// Price Target Alerts UI
+// Price Target Alerts
 async function renderPriceAlerts() {
   const { priceAlerts = [] } = await chrome.storage.local.get('priceAlerts');
   const wrap = document.getElementById('alert-pills');
@@ -487,16 +507,16 @@ async function renderPriceAlerts() {
   if (!wrap) return;
 
   if (!priceAlerts.length) {
-    wrap.innerHTML = `<span class="sub-micro">Click 🔔 on any coin or enter a target price above.</span>`;
+    wrap.innerHTML = `<span class="hint-line">Click + on any row or enter a target price above.</span>`;
     return;
   }
 
   wrap.innerHTML = priceAlerts
     .map((a) => {
-      const op = a.condition === 'above' ? '≥' : '≤';
-      return `<span class="alert-pill ${a.triggered ? 'hit' : ''}">
-        <b>${esc(a.sym)}</b> ${op} $${a.target} ${a.triggered ? '✓' : ''}
-        <button data-del-alert="${esc(a.id)}" title="Remove alert">×</button>
+      const op = a.condition === 'above' ? '>=' : '<=';
+      return `<span class="chip ${a.triggered ? 'hit' : ''}">
+        <b>${esc(a.sym)}</b> ${op} $${a.target}${a.triggered ? ' (HIT)' : ''}
+        <button data-del-alert="${esc(a.id)}" title="Delete alert">×</button>
       </span>`;
     })
     .join('');
@@ -527,11 +547,11 @@ document.getElementById('btn-add-alert')?.addEventListener('click', async () => 
   await chrome.storage.local.set({ priceAlerts: next });
   if (targetInput) targetInput.value = '';
   renderPriceAlerts();
-  setYuzuLine(`Target locked! I'll ping you as soon as ${sym} goes ${condition} $${target}.`, 'peace');
+  setYuzuLine(`Alert set: ${sym} ${condition === 'above' ? '>=' : '<='} $${target}.`, 'peace');
 });
 
 // =========================================================================
-// TAB 2: ON-CHAIN TOKEN SCANNER & WATCHLIST PINNING
+// TAB 2: ON-CHAIN TOKEN SCANNER
 // =========================================================================
 async function renderScanCard(token) {
   const card = document.getElementById('scan-result-card');
@@ -542,14 +562,14 @@ async function renderScanCard(token) {
   const isPinned = pinnedTokens.some((p) => p.address.toLowerCase() === token.address.toLowerCase());
 
   const lvl = token.safety?.level || 'SAFE';
-  const badgeCls = lvl === 'SAFE' || lvl === 'LIQ OK' ? 'safe' : lvl === 'HIGH RISK' ? 'risk' : 'warn';
+  const badgeCls = lvl === 'SAFE' || lvl === 'VERIFIED LIQ' ? 'safe' : lvl === 'HIGH RISK' ? 'risk' : 'warn';
   const buyPct = token.buyRatioPct ?? 50;
   const sellPct = 100 - buyPct;
 
   const momCell = (lbl, val) => {
     const v = Number(val) || 0;
-    const col = v >= 0 ? '#b8ff65' : '#ff8bcb';
-    return `<div class="mom-cell"><div class="micro">${lbl}</div><b style="color:${col}">${v >= 0 ? '+' : ''}${v.toFixed(1)}%</b></div>`;
+    const col = v >= 0 ? '#c8ff78' : '#f87171';
+    return `<div class="mom-cell"><div class="label" style="font-size:8px">${lbl}</div><b style="color:${col}">${v >= 0 ? '+' : ''}${v.toFixed(1)}%</b></div>`;
   };
 
   const risks = token.safety?.risks || [];
@@ -558,11 +578,11 @@ async function renderScanCard(token) {
       ? `LP Locked: ${token.safety.lpLockedPct}%`
       : token.safety?.auditedByRugCheck
       ? 'RugCheck Verified'
-      : `${token.chainId.toUpperCase()} Pair`;
+      : `${token.chainId.toUpperCase()} Pool`;
   const volRatioTxt = token.volToMcPct != null ? ` · Vol/MCap ${token.volToMcPct}%` : '';
   const riskTxt = risks.length
-    ? `⚠️ Flags: ${risks.map((r) => esc(r.name)).join(' · ')}`
-    : `✓ ${esc(lpTxt)}${esc(volRatioTxt)} · No critical contract risks`;
+    ? `Flags: ${risks.map((r) => esc(r.name)).join(' · ')}`
+    : `${esc(lpTxt)}${esc(volRatioTxt)} · No critical contract flags`;
 
   const jupUrl =
     token.chainId === 'solana'
@@ -576,26 +596,26 @@ async function renderScanCard(token) {
   card.innerHTML = `
     <div class="scan-top">
       <div>
-        <div class="scan-title">$${esc(token.symbol)} <span class="sub-micro">${esc(token.name)}</span></div>
-        <div class="sub-micro">${esc(token.chainId.toUpperCase())} · ${esc(token.dexId.toUpperCase())} · Age ${esc(token.ageLabel)} · ${esc(shortCA(token.address))}</div>
+        <div class="scan-title">${esc(token.symbol)} <span class="muted-mono">${esc(token.name)}</span></div>
+        <div class="muted-mono" style="margin-top:2px">${esc(token.chainId.toUpperCase())} · ${esc(token.dexId.toUpperCase())} · Age ${esc(token.ageLabel)} · ${esc(shortCA(token.address))}</div>
       </div>
       <div class="scan-badges">
-        <button id="btn-pin-token" class="pin-star-btn ${isPinned ? 'pinned' : ''}" title="Pin to PULSE Watchlist">${isPinned ? '★ PINNED' : '☆ PIN'}</button>
-        <span class="safety-badge ${badgeCls}">${esc(lvl)}</span>
+        <button id="btn-pin-token" class="pin-btn ${isPinned ? 'pinned' : ''}">${isPinned ? 'PINNED' : 'PIN'}</button>
+        <span class="status-tag ${badgeCls}">${esc(lvl)}</span>
       </div>
     </div>
 
-    <div class="kpi-grid">
-      <div class="kpi-box"><span class="micro">PRICE</span><b>${fmtPrice(token.priceUsd)}</b></div>
-      <div class="kpi-box"><span class="micro">MCAP</span><b>${fmtCompactUsd(token.marketCap)}</b></div>
-      <div class="kpi-box"><span class="micro">LIQUIDITY</span><b>${fmtCompactUsd(token.liquidityUsd)}</b></div>
-      <div class="kpi-box"><span class="micro">24H VOL</span><b>${fmtCompactUsd(token.vol24h)}</b></div>
+    <div class="kpi-grid-4">
+      <div class="stat-cell"><span class="label" style="font-size:8px">PRICE</span><b>${fmtPrice(token.priceUsd)}</b></div>
+      <div class="stat-cell"><span class="label" style="font-size:8px">MCAP</span><b>${fmtCompactUsd(token.marketCap)}</b></div>
+      <div class="stat-cell"><span class="label" style="font-size:8px">LIQUIDITY</span><b>${fmtCompactUsd(token.liquidityUsd)}</b></div>
+      <div class="stat-cell"><span class="label" style="font-size:8px">24H VOL</span><b>${fmtCompactUsd(token.vol24h)}</b></div>
     </div>
 
     <div class="flow-wrap">
       <div class="flow-labels">
-        <span class="lime-txt">BUYS ${token.buys24h.toLocaleString()} (${buyPct}%)</span>
-        <span class="pink-txt">SELLS ${token.sells24h.toLocaleString()} (${sellPct}%)</span>
+        <span style="color:#c8ff78">BUYS ${buyPct}% (${token.buys24h.toLocaleString()})</span>
+        <span style="color:#f87171">SELLS ${sellPct}% (${token.sells24h.toLocaleString()})</span>
       </div>
       <div class="flow-bar"><div class="flow-buy" style="width:${buyPct}%"></div></div>
     </div>
@@ -607,12 +627,12 @@ async function renderScanCard(token) {
       ${momCell('24H', token.priceChange?.h24)}
     </div>
 
-    <div class="risk-list" style="color:${risks.length ? '#ffd166' : '#b8ff65'}">${riskTxt}</div>
+    <div class="audit-note" style="color:${risks.length ? '#fbbf24' : '#cbd5e1'}">${riskTxt}</div>
 
     <div class="scan-links">
-      <a href="${esc(token.pairUrl)}" target="_blank" rel="noopener">DEXSCREENER ↗</a>
-      <a href="${esc(jupUrl)}" target="_blank" rel="noopener">${token.chainId === 'solana' ? 'JUPITER ↗' : 'TRADE ↗'}</a>
-      <a href="${esc(rugUrl)}" target="_blank" rel="noopener">${token.chainId === 'solana' ? 'RUGCHECK ↗' : 'CHART ↗'}</a>
+      <a href="${esc(token.pairUrl)}" target="_blank" rel="noopener">DEXSCREENER</a>
+      <a href="${esc(jupUrl)}" target="_blank" rel="noopener">${token.chainId === 'solana' ? 'JUPITER' : 'TRADE'}</a>
+      <a href="${esc(rugUrl)}" target="_blank" rel="noopener">${token.chainId === 'solana' ? 'RUGCHECK' : 'CHART'}</a>
       <button id="btn-copy-scanned-ca" data-ca="${esc(token.address)}">COPY CA</button>
     </div>
   `;
@@ -624,7 +644,7 @@ async function renderScanCard(token) {
     let next;
     if (exists) {
       next = list.filter((p) => p.address.toLowerCase() !== token.address.toLowerCase());
-      setYuzuLine(`Removed $${token.symbol} from your Pulse watchlist.`, 'shy');
+      setYuzuLine(`Removed ${token.symbol} from watchlist.`, 'shy');
     } else {
       next = [
         {
@@ -640,7 +660,7 @@ async function renderScanCard(token) {
         },
         ...list,
       ].slice(0, 8);
-      setYuzuLine(`Pinned $${token.symbol} to your Pulse tab! I'll keep its price & alerts updated.`, 'dance');
+      setYuzuLine(`Added ${token.symbol} to Market watchlist.`, 'dance');
     }
     await chrome.storage.local.set({ pinnedTokens: next });
     renderScanCard(token);
@@ -651,7 +671,10 @@ async function renderScanCard(token) {
     const ca = e.currentTarget.getAttribute('data-ca');
     if (ca) {
       navigator.clipboard?.writeText(ca);
-      e.currentTarget.textContent = 'COPIED!';
+      e.currentTarget.textContent = 'COPIED';
+      setTimeout(() => {
+        if (e.currentTarget) e.currentTarget.textContent = 'COPY CA';
+      }, 1200);
     }
   });
 }
@@ -669,7 +692,7 @@ async function renderRecentScans() {
   wrap.innerHTML = recentScans
     .map(
       (s) =>
-        `<button class="chip-btn" data-scan-q="${esc(s.address)}">$${esc(String(s.symbol).replace(/^\$+/, ''))} · ${fmtPrice(s.priceUsd)}</button>`
+        `<button class="chip" data-scan-q="${esc(s.address)}"><b>${esc(String(s.symbol).replace(/^\$+/, ''))}</b> ${fmtPrice(s.priceUsd)}</button>`
     )
     .join('');
   wrap.querySelectorAll('button[data-scan-q]').forEach((b) => {
@@ -685,10 +708,12 @@ function triggerTokenScan(query) {
   if (!q) return;
   if (inp) inp.value = q;
   if (btn) {
-    btn.textContent = '...';
+    btn.textContent = 'WAIT';
     btn.disabled = true;
   }
-  if (card) card.innerHTML = `<div class="empty-hint">Scanning DEX liquidity pools &amp; RugCheck contract audit for <b>${esc(shortCA(q))}</b>...</div>`;
+  if (card) {
+    card.innerHTML = `<div class="empty-state"><p class="empty-desc">Querying DEX pools and RugCheck contract report for <b>${esc(shortCA(q))}</b>...</p></div>`;
+  }
 
   chrome.runtime.sendMessage({ type: 'SCAN_TOKEN', query: q }, (res) => {
     if (btn) {
@@ -696,14 +721,14 @@ function triggerTokenScan(query) {
       btn.disabled = false;
     }
     if (chrome.runtime.lastError || !res?.ok || !res.token) {
-      const errMsg = res?.error || 'Could not reach DEX scanner right now.';
-      if (card) card.innerHTML = `<div class="empty-hint pink-txt">${esc(errMsg)}</div>`;
+      const errMsg = res?.error || 'Scanner unavailable right now.';
+      if (card) card.innerHTML = `<div class="empty-state"><p class="empty-desc" style="color:#f87171">${esc(errMsg)}</p></div>`;
       setYuzuLine(errMsg, 'pout');
       return;
     }
     renderScanCard(res.token);
     renderRecentScans();
-    setYuzuLine(`$${res.token.symbol}: ${res.token.verdict}`, res.token.pose || 'peace');
+    setYuzuLine(`${res.token.symbol}: ${res.token.verdict}`, res.token.pose || 'peace');
   });
 }
 
@@ -724,7 +749,7 @@ function probeActiveTabContext() {
         if (hostLbl && ctx.host) hostLbl.textContent = ctx.host;
 
         const items = [
-          ...(ctx.detectedCAs || []).map((ca) => ({ label: `CA ${shortCA(ca)}`, q: ca })),
+          ...(ctx.detectedCAs || []).map((ca) => ({ label: shortCA(ca), q: ca })),
           ...(ctx.detectedTickers || []).slice(0, 4).map((t) => ({ label: t, q: t })),
         ];
         const box = document.getElementById('page-detected-box');
@@ -733,7 +758,7 @@ function probeActiveTabContext() {
           box.style.display = 'flex';
           wrap.innerHTML = items
             .slice(0, 6)
-            .map((it) => `<button class="chip-btn" data-page-q="${esc(it.q)}">${esc(it.label)}</button>`)
+            .map((it) => `<button class="chip" data-page-q="${esc(it.q)}">${esc(it.label)}</button>`)
             .join('');
           wrap.querySelectorAll('button[data-page-q]').forEach((b) => {
             b.addEventListener('click', () => triggerTokenScan(b.getAttribute('data-page-q')));
@@ -745,14 +770,14 @@ function probeActiveTabContext() {
 }
 
 // =========================================================================
-// TAB 3: FOCUS TIMER & LOCAL BROWSER SCREEN-TIME ANALYTICS
+// TAB 3: ACTIVITY (FOCUS TIMER & LOCAL SCREEN-TIME BREAKDOWN)
 // =========================================================================
 const CAT_META = [
-  { key: 'work', label: 'Work / Dev', color: '#72e7ff' },
-  { key: 'crypto', label: 'Crypto / Charts', color: '#b8ff65' },
-  { key: 'social', label: 'Social / X', color: '#ff8bcb' },
-  { key: 'media', label: 'Media', color: '#a66bff' },
-  { key: 'other', label: 'Web', color: '#8e95b3' },
+  { key: 'work', label: 'Development & Work', color: '#9be8ff' },
+  { key: 'crypto', label: 'Markets & Charts', color: '#c8ff78' },
+  { key: 'social', label: 'Social & Feeds', color: '#e2e8f0' },
+  { key: 'media', label: 'Video & Media', color: '#64748b' },
+  { key: 'other', label: 'General Web', color: '#475569' },
 ];
 
 let focusTickInterval = null;
@@ -766,7 +791,7 @@ function syncFocusTimerUI(focusState, todayFocus) {
   if (streakLbl) {
     const sess = todayFocus?.sessions || 0;
     const mins = todayFocus?.minutes || 0;
-    streakLbl.textContent = `⚡ ${sess} session${sess === 1 ? '' : 's'} · ${mins}m focused today`;
+    streakLbl.textContent = `Completed today: ${sess} ${sess === 1 ? 'session' : 'sessions'} (${mins}m)`;
   }
 
   if (focusTickInterval) {
@@ -775,8 +800,8 @@ function syncFocusTimerUI(focusState, todayFocus) {
   }
 
   if (focusState?.active && focusState.endsAt > Date.now()) {
-    if (btn) btn.textContent = 'STOP';
-    if (modeLbl) modeLbl.textContent = focusState.mode === 'break' ? 'RECHARGE // SHORT BREAK' : 'POMODORO // LOCKED IN';
+    if (btn) btn.textContent = 'STOP SESSION';
+    if (modeLbl) modeLbl.textContent = focusState.mode === 'break' ? 'FOCUS TIMER // BREAK' : 'FOCUS TIMER // ACTIVE';
 
     const tick = () => {
       const rem = Math.max(0, Math.ceil((focusState.endsAt - Date.now()) / 1000));
@@ -791,8 +816,8 @@ function syncFocusTimerUI(focusState, todayFocus) {
     tick();
     focusTickInterval = setInterval(tick, 1000);
   } else {
-    if (btn) btn.textContent = selectedFocusMode === 'break' ? 'START BREAK' : 'START FOCUS';
-    if (modeLbl) modeLbl.textContent = selectedFocusMode === 'break' ? 'RECHARGE // SHORT BREAK' : 'POMODORO // DEEP FOCUS';
+    if (btn) btn.textContent = selectedFocusMode === 'break' ? 'START BREAK' : 'START SESSION';
+    if (modeLbl) modeLbl.textContent = selectedFocusMode === 'break' ? 'FOCUS TIMER // BREAK' : 'FOCUS TIMER // READY';
     if (disp) disp.textContent = `${String(selectedFocusMin).padStart(2, '0')}:00`;
   }
 }
@@ -813,16 +838,19 @@ async function renderFocusAndWebStats() {
   const totalSec = Math.max(0, day.totalSec || 0);
   const workShare = totalSec > 0 ? Math.round(((day.categories?.work || 0) / totalSec) * 100) : 0;
   if (totalEl) {
-    totalEl.textContent = totalSec > 0 ? `${fmtDuration(totalSec)} · ${workShare}% Work` : 'Tracking active tabs...';
+    totalEl.textContent = totalSec > 0 ? `${fmtDuration(totalSec)} (${workShare}% Work)` : '0m tracked';
   }
 
   const stackBar = document.getElementById('cat-stack-bar');
   const legend = document.getElementById('cat-legend');
   if (stackBar && legend) {
     if (totalSec === 0) {
-      stackBar.innerHTML = `<span style="width:100%;background:rgba(255,255,255,0.12)"></span>`;
+      stackBar.innerHTML = `<span style="width:100%;background:rgba(255,255,255,0.08)"></span>`;
       legend.innerHTML = CAT_META.slice(0, 4)
-        .map((c) => `<span><i class="cat-dot" style="background:${c.color}"></i>${c.label} 0m</span>`)
+        .map(
+          (c) =>
+            `<div class="cat-item"><span><i class="cat-swatch" style="background:${c.color}"></i>${c.label}</span><b>0m</b></div>`
+        )
         .join('');
     } else {
       stackBar.innerHTML = CAT_META.map((c) => {
@@ -830,10 +858,11 @@ async function renderFocusAndWebStats() {
         const pct = (val / totalSec) * 100;
         return pct > 0 ? `<span style="width:${pct.toFixed(1)}%;background:${c.color}"></span>` : '';
       }).join('');
-      legend.innerHTML = CAT_META.filter((c) => (day.categories?.[c.key] || 0) > 0)
+      legend.innerHTML = CAT_META.filter((c) => (day.categories?.[c.key] || 0) > 0 || c.key !== 'other')
+        .slice(0, 4)
         .map((c) => {
           const val = day.categories?.[c.key] || 0;
-          return `<span><i class="cat-dot" style="background:${c.color}"></i>${c.label} <b>${fmtDuration(val)}</b></span>`;
+          return `<div class="cat-item"><span><i class="cat-swatch" style="background:${c.color}"></i>${c.label}</span><b>${fmtDuration(val)}</b></div>`;
         })
         .join('');
     }
@@ -843,14 +872,15 @@ async function renderFocusAndWebStats() {
   if (domList) {
     const entries = Object.entries(day.domains || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
     if (!entries.length) {
-      domList.innerHTML = `<div class="empty-hint">Browse normally — Yuzu privately tallies active time per domain right in local storage (never uploaded).</div>`;
+      domList.innerHTML = `<p class="hint-line">Active tab time is tallied locally in browser storage as you browse.</p>`;
     } else {
       const maxSec = entries[0][1] || 1;
       domList.innerHTML = entries
-        .map(([host, sec]) => {
-          const w = Math.max(6, Math.round((sec / maxSec) * 100));
+        .map(([host, sec], idx) => {
+          const w = Math.max(5, Math.round((sec / maxSec) * 100));
+          const rank = String(idx + 1).padStart(2, '0');
           return `<div class="domain-row">
-            <div class="domain-meta"><b>${esc(host)}</b><span class="sub-micro">${fmtDuration(sec)}</span></div>
+            <div class="domain-meta"><span><span class="muted-mono">${rank}</span> <b>${esc(host)}</b></span><span>${fmtDuration(sec)}</span></div>
             <div class="domain-bar-bg"><div class="domain-bar-fill" style="width:${w}%"></div></div>
           </div>`;
         })
@@ -877,15 +907,15 @@ document.getElementById('btn-focus-toggle')?.addEventListener('click', async () 
   if (focusState?.active && focusState.endsAt > Date.now()) {
     chrome.runtime.sendMessage({ type: 'FOCUS_STOP' }, () => {
       renderFocusAndWebStats();
-      setYuzuLine('Focus timer paused. Ready whenever you want to lock back in!', 'shy');
+      setYuzuLine('Session stopped. Ready when you want to resume.', 'shy');
     });
   } else {
     chrome.runtime.sendMessage({ type: 'FOCUS_START', minutes: selectedFocusMin, mode: selectedFocusMode }, () => {
       renderFocusAndWebStats();
       setYuzuLine(
         selectedFocusMode === 'break'
-          ? `5-minute breather started. Stretch and hydrate~`
-          : `Locked in for ${selectedFocusMin} minutes! Close the noisy tabs — I'm watching the clock.`,
+          ? `5-minute break started.`
+          : `Focus timer set for ${selectedFocusMin} minutes.`,
         'dance'
       );
     });
@@ -901,7 +931,7 @@ document.getElementById('btn-reset-webstats')?.addEventListener('click', async (
 });
 
 // =========================================================================
-// TAB 4: MULTI-TURN AI COPILOT + PNL SIZER + ALPHA SCRATCHPAD
+// TAB 4: ASSISTANT, CONVERTER, POSITION SIZER & NOTES
 // =========================================================================
 async function askYuzuAI(userPrompt, fallbackBuilder) {
   const outTxt = document.getElementById('ai-output-text');
@@ -909,15 +939,15 @@ async function askYuzuAI(userPrompt, fallbackBuilder) {
   const sendBtn = document.getElementById('btn-ai-send');
   if (outTxt) {
     outTxt.classList.remove('ai-placeholder');
-    outTxt.textContent = 'Yuzu is thinking...';
+    outTxt.textContent = 'Generating response...';
   }
   if (outActs) outActs.style.display = 'none';
   if (sendBtn) sendBtn.disabled = true;
 
   const sysPrompt =
-    'You are Yuzu ($YUZU), a sharp, witty Cyber-Y2K 3D AI companion living in the user’s Chrome browser. ' +
+    'You are Yuzu, a concise, analytical assistant inside a Chrome market & productivity terminal. ' +
     'Reply in the SAME language the user writes in (Russian, Ukrainian, or English). ' +
-    'Keep answers concise (max 3 short sentences or 3 crisp bullets), insightful, zero cringe clichés, no rocket emojis.';
+    'STRICT RULE: Never use any emojis, hashtags, or hype cliches. Keep answers direct, clear, and under 3 short sentences.';
 
   let reply = '';
   try {
@@ -937,12 +967,12 @@ async function askYuzuAI(userPrompt, fallbackBuilder) {
     clearTimeout(timer);
     if (r.ok) {
       const j = await r.json();
-      if (j?.content) reply = String(j.content).trim();
+      if (j?.content) reply = stripEmojis(j.content);
     }
   } catch {}
 
   if (!reply) {
-    reply = fallbackBuilder ? fallbackBuilder() : 'Signal is rate-limited right now — try again in a few seconds!';
+    reply = stripEmojis(fallbackBuilder ? fallbackBuilder() : 'Assistant endpoint is busy. Try again shortly.');
   }
 
   aiHistory.push({ role: 'user', content: userPrompt.slice(0, 350) }, { role: 'assistant', content: reply.slice(0, 350) });
@@ -951,7 +981,7 @@ async function askYuzuAI(userPrompt, fallbackBuilder) {
   if (outTxt) outTxt.textContent = reply;
   if (outActs) outActs.style.display = 'flex';
   if (sendBtn) sendBtn.disabled = false;
-  setYuzuLine(reply.slice(0, 175) + (reply.length > 175 ? '…' : ''), 'peace');
+  setYuzuLine(reply.slice(0, 170) + (reply.length > 170 ? '...' : ''), 'peace');
 }
 
 document.querySelectorAll('button[data-ai-act]').forEach((btn) => {
@@ -965,33 +995,33 @@ document.querySelectorAll('button[data-ai-act]').forEach((btn) => {
       const srcText = activePageCtx?.selection || activePageCtx?.snippet || '';
       const title = activePageCtx?.title || 'Current Tab';
       if (!srcText) {
-        askYuzuAI(`Give me a quick productivity tip since this browser tab has no readable article text.`, () =>
-          `Open any article, docs page, or X thread (or highlight text first) and hit Summarize Tab — I'll boil it down into 3 bullets.`
+        askYuzuAI(`Give a concise note on how to use page summarization.`, () =>
+          `Open any article, documentation page, or thread (or highlight text first) and click Summarize Page for a 3-point overview.`
         );
         return;
       }
       askYuzuAI(
-        `Summarize this webpage ("${title}") into 3 ultra-crisp bullet points:\n\n${srcText.slice(0, 1600)}`,
+        `Summarize this page ("${title}") in 3 clear, factual bullet points using plain dashes (-), no emojis:\n\n${srcText.slice(0, 1600)}`,
         () => {
           const sentences = srcText.split(/(?<=[.!?])\s+/).filter((s) => s.length > 25).slice(0, 3);
-          return `• ${title}\n• ${sentences.join('\n• ') || srcText.slice(0, 220)}`;
+          return `- ${title}\n- ${sentences.join('\n- ') || srcText.slice(0, 220)}`;
         }
       );
     } else if (act === 'xreply') {
       const tweet = activePageCtx?.selection || activePageCtx?.snippet?.slice(0, 700) || '';
       askYuzuAI(
         tweet
-          ? `Write 2 short, witty, non-banal X/Twitter reply options (under 180 chars each, no hashtags, no emojis) responding to this post:\n"${tweet}"`
-          : `Write 2 short, witty, non-banal Crypto Twitter observation lines from Yuzu's perspective (no hashtags, no rocket emojis).`,
+          ? `Write 2 short, sharp X reply options (under 180 chars each, zero emojis, zero hashtags) responding to:\n"${tweet}"`
+          : `Write 2 short, sharp market observation lines suitable for X (zero emojis, zero hashtags).`,
         () =>
-          `1) Everyone wants conviction until the chart tests their patience for 20 minutes.\n2) Noise fades fast — ship something people actually use.`
+          `1) Conviction gets tested in chop long before the breakout arrives.\n2) Liquidity and execution matter more than timeline narratives.`
       );
     } else if (act === 'market') {
       const mSummary = currentMarket.map((m) => `${m.sym} $${m.price} (${m.pct >= 0 ? '+' : ''}${m.pct.toFixed(1)}%)`).join(', ');
       const fgTxt = currentFG ? `Fear & Greed: ${currentFG.value} (${currentFG.label})` : '';
       const tpsTxt = currentSolNet?.tps ? `Solana TPS: ${currentSolNet.tps}` : '';
       askYuzuAI(
-        `Give a sharp 3-sentence market read based on live tape: ${fgTxt}, ${tpsTxt}. Prices: ${mSummary}.`,
+        `Provide a concise 3-sentence market assessment (no emojis): ${fgTxt}, ${tpsTxt}. Prices: ${mSummary}.`,
         () => buildBrief(currentMarket, currentFG, currentSolNet)
       );
     } else if (act === 'roast') {
@@ -1001,9 +1031,9 @@ document.querySelectorAll('button[data-ai-act]').forEach((btn) => {
       const wrk = fmtDuration(dayWeb?.categories?.work || 0);
       const fSessions = dayFocus?.sessions || 0;
       askYuzuAI(
-        `Playfully roast my browser habits today in 2-3 witty sentences: Total screen time ${tot}, Work/Dev ${wrk}, Social/Twitter ${soc}, Charts/Crypto ${cry}, Pomodoro sessions completed: ${fSessions}.`,
+        `Give a direct, dry-witted 2-sentence review of today's browser activity (no emojis): Total ${tot}, Work ${wrk}, Social ${soc}, Markets ${cry}, Focus sessions: ${fSessions}.`,
         () =>
-          `${tot} online today (${soc} scrolling socials, ${cry} staring at candles, and ${fSessions} focus sessions). Start a 25m timer before the timeline eats your whole afternoon!`
+          `Logged ${tot} today: ${wrk} in work tools, ${soc} on social feeds, ${cry} on charts, and ${fSessions} focus sessions.`
       );
     }
   });
@@ -1014,7 +1044,7 @@ document.getElementById('btn-ai-send')?.addEventListener('click', () => {
   const q = inp?.value?.trim();
   if (!q) return;
   inp.value = '';
-  askYuzuAI(q, () => `I'm right here! Free AI relay is catching its breath — ask me again in a moment.`);
+  askYuzuAI(q, () => `Assistant relay is temporarily busy. Please try again in a few seconds.`);
 });
 document.getElementById('ai-prompt-input')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('btn-ai-send')?.click();
@@ -1033,7 +1063,7 @@ document.getElementById('btn-ai-speak')?.addEventListener('click', () => {
   speakText(txt);
 });
 
-// SOL Converter & Position PnL Sizer
+// SOL Converter & Position Sizer
 let liveSolPrice = 0;
 const convSol = document.getElementById('conv-sol');
 const convUsd = document.getElementById('conv-usd');
@@ -1068,28 +1098,29 @@ function recalcPnL() {
   const roi = ((target - entry) / entry) * 100;
   const profit = size * (roi / 100);
   const sign = roi >= 0 ? '+' : '';
-  out.textContent = `ROI: ${sign}${roi.toFixed(1)}% · Net PnL: ${sign}$${profit.toFixed(2)} (Total $${(size + profit).toFixed(2)})`;
-  out.style.color = roi >= 0 ? '#b8ff65' : '#ff8bcb';
-  out.style.borderColor = roi >= 0 ? 'rgba(184,255,101,0.38)' : 'rgba(255,139,203,0.45)';
+  out.textContent = `ROI ${sign}${roi.toFixed(1)}%  |  Net ${sign}$${profit.toFixed(2)}  |  Total $${(size + profit).toFixed(2)}`;
+  out.style.color = roi >= 0 ? '#c8ff78' : '#f87171';
+  out.style.background = roi >= 0 ? 'rgba(200,255,120,0.1)' : 'rgba(248,113,113,0.11)';
+  out.style.borderColor = roi >= 0 ? 'rgba(200,255,120,0.32)' : 'rgba(248,113,113,0.35)';
 }
 ['pnl-size', 'pnl-entry', 'pnl-target'].forEach((id) => {
   document.getElementById(id)?.addEventListener('input', recalcPnL);
 });
 recalcPnL();
 
-// Persistent Alpha Scratchpad
+// Notes Scratchpad
 const alphaNotesEl = document.getElementById('alpha-notes');
 let notesTimer = null;
 alphaNotesEl?.addEventListener('input', () => {
   clearTimeout(notesTimer);
   notesTimer = setTimeout(() => {
     chrome.storage.local.set({ alphaNotes: alphaNotesEl.value });
-  }, 250);
+  }, 200);
 });
 document.getElementById('btn-copy-notes')?.addEventListener('click', (e) => {
   if (alphaNotesEl?.value) {
     navigator.clipboard?.writeText(alphaNotesEl.value);
-    e.currentTarget.textContent = 'COPIED!';
+    e.currentTarget.textContent = 'COPIED';
     setTimeout(() => (e.currentTarget.textContent = 'COPY'), 1200);
   }
 });
@@ -1099,7 +1130,7 @@ document.getElementById('btn-clear-notes')?.addEventListener('click', () => {
 });
 
 // =========================================================================
-// RIGHT-CLICK CONTEXT MENU HANDOFF (pendingAction)
+// RIGHT-CLICK CONTEXT MENU HANDOFF
 // =========================================================================
 async function consumePendingAction(action) {
   if (!action || Date.now() - (action.ts || 0) > 60000) return;
@@ -1110,8 +1141,8 @@ async function consumePendingAction(action) {
   } else if (action.type === 'ai' && action.text) {
     switchTab('ai');
     askYuzuAI(
-      `Explain this selection concisely or suggest a sharp reply if it's a social post:\n"${action.text}"`,
-      () => `Selected: "${action.text.slice(0, 180)}..."`
+      `Analyze this selected text concisely (no emojis):\n"${action.text}"`,
+      () => `Selected text: "${action.text.slice(0, 180)}"`
     );
   }
 }
@@ -1145,7 +1176,7 @@ function requestRefresh() {
       if (stored.market?.length) {
         renderPulse(stored.market, stored.source, stored.updatedAt, stored.fearGreed, stored.solNetwork, stored.pinnedTokens);
       } else if (speechEl) {
-        speechEl.textContent = 'Live feed unreachable right now. Click ↻ to retry.';
+        speechEl.textContent = 'Market feed unreachable. Click REFRESH to retry.';
       }
     } catch {}
   };
@@ -1183,14 +1214,14 @@ chrome.storage.local
     const wOn = st.widgetEnabled !== false;
     const aOn = st.alertsEnabled !== false;
     if (btnWidget) {
-      btnWidget.textContent = wOn ? 'WIDGET: ON' : 'WIDGET: OFF';
+      btnWidget.textContent = wOn ? 'OVERLAY: ON' : 'OVERLAY: OFF';
       btnWidget.classList.toggle('off', !wOn);
     }
     if (btnAlerts) {
       btnAlerts.textContent = aOn ? 'ALERTS: ON' : 'ALERTS: OFF';
       btnAlerts.classList.toggle('off', !aOn);
     }
-    if (st.stageMode) applyStageMode(st.stageMode);
+    applyStageMode(st.stageMode || 'strip');
     if (alphaNotesEl && st.alphaNotes) alphaNotesEl.value = st.alphaNotes;
     initPortfolioEditor();
     if (st.market?.length) {
@@ -1211,7 +1242,7 @@ btnWidget?.addEventListener('click', async () => {
   const { widgetEnabled } = await chrome.storage.local.get('widgetEnabled');
   const next = widgetEnabled === false;
   await chrome.storage.local.set({ widgetEnabled: next });
-  btnWidget.textContent = next ? 'WIDGET: ON' : 'WIDGET: OFF';
+  btnWidget.textContent = next ? 'OVERLAY: ON' : 'OVERLAY: OFF';
   btnWidget.classList.toggle('off', !next);
 });
 

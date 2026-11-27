@@ -37,7 +37,7 @@ function updateBadge(market, focusState) {
     if (focusState?.active && focusState.endsAt > Date.now()) {
       const remMin = Math.max(1, Math.ceil((focusState.endsAt - Date.now()) / 60000));
       chrome.action.setBadgeText({ text: `${remMin}m` });
-      chrome.action.setBadgeBackgroundColor({ color: focusState.mode === 'break' ? '#72e7ff' : '#a66bff' });
+      chrome.action.setBadgeBackgroundColor({ color: '#1e293b' });
       return;
     }
     if (!Array.isArray(market) || !market.length) return;
@@ -45,7 +45,7 @@ function updateBadge(market, focusState) {
     if (!sol || Number.isNaN(sol.pct)) return;
     const sign = sol.pct >= 0 ? '+' : '';
     chrome.action.setBadgeText({ text: `${sign}${sol.pct.toFixed(0)}%` });
-    chrome.action.setBadgeBackgroundColor({ color: sol.pct >= 0 ? '#16a34a' : '#ff4d9e' });
+    chrome.action.setBadgeBackgroundColor({ color: sol.pct >= 0 ? '#15803d' : '#be123c' });
   } catch {}
 }
 
@@ -196,7 +196,7 @@ async function fetchSolanaTelemetry() {
     if (!s || !s.samplePeriodSecs) return solNetwork || null;
     const totalTps = Math.round((s.numTransactions || 0) / s.samplePeriodSecs);
     const nonVote = s.numNonVoteTransactions != null ? Math.round(s.numNonVoteTransactions / s.samplePeriodSecs) : null;
-    const status = totalTps >= 2200 ? 'OPTIMAL' : totalTps >= 1200 ? 'NORMAL' : 'CONGESTED';
+    const status = totalTps >= 2200 ? 'OPTIMAL' : totalTps >= 1200 ? 'NORMAL' : 'BUSY';
     const info = { tps: totalTps, nonVoteTps: nonVote, status, updatedAt: Date.now() };
     await chrome.storage.local.set({ solNetwork: info });
     return info;
@@ -256,12 +256,12 @@ async function maybeNotifyMoversAndTargets(market, pinned = []) {
           (al.condition === 'below' && coin.price <= al.target);
         if (hit) {
           changed = true;
-          const op = al.condition === 'above' ? '≥' : '≤';
+          const op = al.condition === 'above' ? '>=' : '<=';
           chrome.notifications.create(`yuzu-target-${al.id}-${Date.now()}`, {
             type: 'basic',
             iconUrl: 'icons/icon128.png',
-            title: `$YUZU TARGET HIT: ${coin.sym} ${op} $${al.target}`,
-            message: `${coin.sym} reached $${coin.price >= 1 ? coin.price.toFixed(2) : coin.price.toFixed(6)} (${coin.pct >= 0 ? '+' : ''}${coin.pct.toFixed(1)}% 24h).`,
+            title: `$YUZU Price Alert: ${coin.sym} ${op} $${al.target}`,
+            message: `${coin.sym} is at $${coin.price >= 1 ? coin.price.toFixed(2) : coin.price.toFixed(6)} (${coin.pct >= 0 ? '+' : ''}${coin.pct.toFixed(1)}% 24h).`,
           });
           return { ...al, triggered: true, triggeredAt: Date.now() };
         }
@@ -276,13 +276,13 @@ async function maybeNotifyMoversAndTargets(market, pinned = []) {
     const bigMover = [...market].sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))[0];
     if (!bigMover || Math.abs(bigMover.pct) < 5) return;
 
-    const dir = bigMover.pct > 0 ? 'PUMPING' : 'DUMPING';
+    const dir = bigMover.pct > 0 ? 'UP' : 'DOWN';
     const sign = bigMover.pct > 0 ? '+' : '';
     chrome.notifications.create(`yuzu-alert-${Date.now()}`, {
       type: 'basic',
       iconUrl: 'icons/icon128.png',
-      title: `$YUZU RADAR: ${bigMover.sym} ${dir}`,
-      message: `${bigMover.sym} moved ${sign}${bigMover.pct.toFixed(1)}% in the last 24h.`,
+      title: `$YUZU Market Move: ${bigMover.sym} ${dir}`,
+      message: `${bigMover.sym} moved ${sign}${bigMover.pct.toFixed(1)}% over 24h.`,
     });
     await chrome.storage.local.set({ lastAlertAt: Date.now() });
   } catch {}
@@ -349,7 +349,7 @@ function refreshMarket() {
 // =========================================================================
 async function scanToken(rawQuery) {
   const q = String(rawQuery || '').trim();
-  if (!q) return { ok: false, error: 'Enter a Solana CA or $TICKER' };
+  if (!q) return { ok: false, error: 'Enter a contract address or ticker symbol.' };
 
   const isSolanaCA = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(q);
   const isEvmCA = /^0x[a-fA-F0-9]{40}$/.test(q);
@@ -362,7 +362,7 @@ async function scanToken(rawQuery) {
   const dexJson = await fetchJson(dexUrl, 5500);
   const pairs = Array.isArray(dexJson?.pairs) ? dexJson.pairs : [];
   if (!pairs.length) {
-    return { ok: false, error: 'No active DEX liquidity pairs found for that query.' };
+    return { ok: false, error: 'No active DEX liquidity pools found for that query.' };
   }
 
   const sortedPairs = [...pairs].sort((a, b) => {
@@ -409,7 +409,7 @@ async function scanToken(rawQuery) {
   } else if (liquidityUsd < 25000 || risks.length >= 2 || (scoreNorm != null && scoreNorm > 20)) {
     safetyLevel = 'CAUTION';
   } else if (!rug && !isSol) {
-    safetyLevel = liquidityUsd >= 50000 ? 'LIQ OK' : 'CHECK CONTRACT';
+    safetyLevel = liquidityUsd >= 50000 ? 'VERIFIED LIQ' : 'UNVERIFIED';
   }
 
   let ageLabel = '—';
@@ -426,24 +426,24 @@ async function scanToken(rawQuery) {
     pose = 'pout';
     notes.push(
       liquidityUsd < 5000
-        ? `Careful! Liquidity is razor-thin ($${Math.round(liquidityUsd).toLocaleString()}).`
-        : `Heads up — contract audit flagged ${risks[0]?.name || 'elevated risk'}.`
+        ? `Thin liquidity ($${Math.round(liquidityUsd).toLocaleString()}). High slippage risk.`
+        : `Audit flagged ${risks[0]?.name || 'elevated contract risk'}.`
     );
   } else if (safetyLevel === 'CAUTION') {
     pose = 'shy';
-    notes.push(`Moderate risk profile (Liq $${Math.round(liquidityUsd / 1000)}K). Size carefully.`);
+    notes.push(`Moderate risk profile (Liquidity $${Math.round(liquidityUsd / 1000)}K).`);
   } else {
     pose = priceChange.h24 > 8 && buyRatioPct >= 52 ? 'dance' : 'peace';
     notes.push(
-      `Clean liquidity ($${liquidityUsd >= 1e6 ? (liquidityUsd / 1e6).toFixed(2) + 'M' : Math.round(liquidityUsd / 1000) + 'K'}) & healthy structure.`
+      `Solid liquidity ($${liquidityUsd >= 1e6 ? (liquidityUsd / 1e6).toFixed(2) + 'M' : Math.round(liquidityUsd / 1000) + 'K'}) and clean contract check.`
     );
   }
 
-  if (buyRatioPct >= 56) notes.push(`Buyers dominate (${buyRatioPct}% buys, 1h ${priceChange.h1 >= 0 ? '+' : ''}${priceChange.h1.toFixed(1)}%).`);
-  else if (buyRatioPct <= 44) notes.push(`Heavy sell pressure right now (${100 - buyRatioPct}% sells).`);
-  else notes.push(`Balanced two-way flow (${buyRatioPct}% buys / ${100 - buyRatioPct}% sells).`);
+  if (buyRatioPct >= 56) notes.push(`Buy flow leads (${buyRatioPct}% buys, 1h ${priceChange.h1 >= 0 ? '+' : ''}${priceChange.h1.toFixed(1)}%).`);
+  else if (buyRatioPct <= 44) notes.push(`Sell pressure elevated (${100 - buyRatioPct}% sells).`);
+  else notes.push(`Balanced order flow (${buyRatioPct}% buys / ${100 - buyRatioPct}% sells).`);
 
-  const cleanSymbol = String(best.baseToken?.symbol || '???').replace(/^\$+/, '');
+  const cleanSymbol = String(best.baseToken?.symbol || 'TOKEN').replace(/^\$+/, '');
   const token = {
     name: best.baseToken?.name || cleanSymbol || 'Unknown',
     symbol: cleanSymbol,
@@ -545,7 +545,7 @@ async function recordScreenTime(rawHost, seconds) {
 }
 
 // =========================================================================
-// POMODORO / FOCUS TIMER ENGINE
+// FOCUS TIMER ENGINE
 // =========================================================================
 async function startFocusTimer(minutes = 25, mode = 'focus') {
   const mins = Math.min(180, Math.max(1, Number(minutes) || 25));
@@ -587,29 +587,29 @@ async function stopFocusTimer(completed = false) {
     chrome.notifications.create(`yuzu-focus-${Date.now()}`, {
       type: 'basic',
       iconUrl: 'icons/icon128.png',
-      title: isBreak ? '$YUZU: BREAK FINISHED' : '$YUZU: FOCUS SESSION COMPLETE!',
+      title: isBreak ? '$YUZU: Break Finished' : '$YUZU: Focus Session Complete',
       message: isBreak
-        ? 'Break over! Ready for your next deep focus block?'
-        : `Awesome discipline! You locked in ${prev.minutes || 25}m today (${focusStats[key].sessions} sessions).`,
+        ? 'Break complete. Ready for the next work session.'
+        : `Completed ${prev.minutes || 25}m session (${focusStats[key].sessions} total today).`,
     });
   }
   return { focusState: nextState, todayFocus: focusStats[key] };
 }
 
 // =========================================================================
-// CONTEXT MENUS & SIDE PANEL SETUP
+// CONTEXT MENUS & SIDE PANEL SETUP (ZERO EMOJIS)
 // =========================================================================
 function setupContextMenus() {
   try {
     chrome.contextMenus.removeAll(() => {
       chrome.contextMenus.create({
         id: 'yuzu-scan-selection',
-        title: '⚡ Scan "%s" with $YUZU Scanner',
+        title: 'Scan "%s" in $YUZU Scanner',
         contexts: ['selection'],
       });
       chrome.contextMenus.create({
         id: 'yuzu-ai-selection',
-        title: '✨ Ask Yuzu AI to Explain / Reply to "%s"',
+        title: 'Analyze "%s" with $YUZU Assistant',
         contexts: ['selection'],
       });
     });
@@ -635,8 +635,8 @@ chrome.contextMenus?.onClicked?.addListener(async (info, tab) => {
       chrome.notifications.create(`yuzu-ctx-scan-${Date.now()}`, {
         type: 'basic',
         iconUrl: 'icons/icon128.png',
-        title: `$${res.token.symbol} · ${res.token.safety.level}`,
-        message: `Price $${res.token.priceUsd.toPrecision(4)} · Liq $${Math.round(res.token.liquidityUsd).toLocaleString()} · Buys ${res.token.buyRatioPct}%`,
+        title: `${res.token.symbol} (${res.token.safety.level})`,
+        message: `Price $${res.token.priceUsd.toPrecision(4)} | Liq $${Math.round(res.token.liquidityUsd).toLocaleString()} | Buys ${res.token.buyRatioPct}%`,
       });
     }
   } else if (info.menuItemId === 'yuzu-ai-selection') {
