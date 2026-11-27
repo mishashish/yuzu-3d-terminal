@@ -597,7 +597,7 @@ async function stopFocusTimer(completed = false) {
 }
 
 // =========================================================================
-// CONTEXT MENUS & SIDE PANEL SETUP (ZERO EMOJIS)
+// CONTEXT MENUS & SIDE PANEL SETUP (ZERO EMOJIS, ZERO AI CALLS)
 // =========================================================================
 function setupContextMenus() {
   try {
@@ -607,47 +607,31 @@ function setupContextMenus() {
         title: 'Scan "%s" in $YUZU Scanner',
         contexts: ['selection'],
       });
-      chrome.contextMenus.create({
-        id: 'yuzu-ai-selection',
-        title: 'Analyze "%s" with $YUZU Assistant',
-        contexts: ['selection'],
-      });
     });
   } catch {}
 }
 
 chrome.contextMenus?.onClicked?.addListener(async (info, tab) => {
   const sel = String(info.selectionText || '').trim();
-  if (!sel) return;
+  if (!sel || info.menuItemId !== 'yuzu-scan-selection') return;
 
-  if (info.menuItemId === 'yuzu-scan-selection') {
-    await chrome.storage.local.set({
-      pendingAction: { type: 'scan', query: sel.slice(0, 80), ts: Date.now() },
-    });
-    try {
-      if (tab?.windowId && chrome.sidePanel?.open) {
-        await chrome.sidePanel.open({ windowId: tab.windowId });
-        return;
-      }
-    } catch {}
-    const res = await scanToken(sel.slice(0, 80));
-    if (res.ok && res.token) {
-      chrome.notifications.create(`yuzu-ctx-scan-${Date.now()}`, {
-        type: 'basic',
-        iconUrl: 'icons/icon128.png',
-        title: `${res.token.symbol} (${res.token.safety.level})`,
-        message: `Price $${res.token.priceUsd.toPrecision(4)} | Liq $${Math.round(res.token.liquidityUsd).toLocaleString()} | Buys ${res.token.buyRatioPct}%`,
-      });
+  await chrome.storage.local.set({
+    pendingAction: { type: 'scan', query: sel.slice(0, 80), ts: Date.now() },
+  });
+  try {
+    if (tab?.windowId && chrome.sidePanel?.open) {
+      await chrome.sidePanel.open({ windowId: tab.windowId });
+      return;
     }
-  } else if (info.menuItemId === 'yuzu-ai-selection') {
-    await chrome.storage.local.set({
-      pendingAction: { type: 'ai', text: sel.slice(0, 1200), ts: Date.now() },
+  } catch {}
+  const res = await scanToken(sel.slice(0, 80));
+  if (res.ok && res.token) {
+    chrome.notifications.create(`yuzu-ctx-scan-${Date.now()}`, {
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: `${res.token.symbol} (${res.token.safety.level})`,
+      message: `Price $${res.token.priceUsd.toPrecision(4)} | Liq $${Math.round(res.token.liquidityUsd).toLocaleString()} | Buys ${res.token.buyRatioPct}%`,
     });
-    try {
-      if (tab?.windowId && chrome.sidePanel?.open) {
-        await chrome.sidePanel.open({ windowId: tab.windowId });
-      }
-    } catch {}
   }
 });
 

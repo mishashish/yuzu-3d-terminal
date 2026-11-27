@@ -46,7 +46,7 @@
       <button class="tab-btn active" data-tab="pulse">MARKET</button>
       <button class="tab-btn" data-tab="scan">SCANNER</button>
       <button class="tab-btn" data-tab="focus">ACTIVITY</button>
-      <button class="tab-btn" data-tab="ai">ASSISTANT</button>
+      <button class="tab-btn" data-tab="tools">TOOLS</button>
     </nav>
 
     <!-- ========================================================= -->
@@ -221,86 +221,76 @@
     </main>
 
     <!-- ========================================================= -->
-    <!-- TAB 4: ASSISTANT & TOOLS                                  -->
+    <!-- TAB 4: TOOLS (100% Local Converter, R:R Sizer & Notes)    -->
     <!-- ========================================================= -->
-    <main class="tab-panel" id="tab-ai">
+    <main class="tab-panel" id="tab-tools">
       <section class="panel-box">
         <div class="box-row">
-          <span class="label">ASSISTANT</span>
-          <span class="muted-mono" id="ai-tab-host">Active Tab</span>
+          <span class="label">SOL / USD CONVERTER</span>
+          <span class="muted-mono" id="calc-sol-rate">1 SOL = —</span>
         </div>
-        <div class="action-grid">
-          <button class="seg-btn" data-ai-act="summarize">Summarize Page</button>
-          <button class="seg-btn" data-ai-act="xreply">Draft Reply</button>
-          <button class="seg-btn" data-ai-act="market">Market Read</button>
-          <button class="seg-btn" data-ai-act="roast">Activity Review</button>
-        </div>
-        <div class="search-row">
-          <input id="ai-prompt-input" type="text" placeholder="Ask a question (EN / RU / UA)..." class="field" />
-          <button id="btn-ai-send" class="btn-primary">SEND</button>
-        </div>
-        <div class="ai-output-box" id="ai-output-box">
-          <span id="ai-output-text" class="ai-placeholder">Select an action above to summarize the open page, draft a reply, or ask a question directly.</span>
-          <div class="ai-out-actions" id="ai-out-actions" style="display: none">
-            <button class="inline-btn" id="btn-ai-copy">COPY</button>
-            <button class="inline-btn" id="btn-ai-speak">SPEAK</button>
+        <div class="calc-conv-row">
+          <div class="calc-field">
+            <label>SOL</label>
+            <input id="conv-sol" type="number" step="any" value="1" class="field" />
+          </div>
+          <span class="swap-sep">=</span>
+          <div class="calc-field">
+            <label>USD</label>
+            <input id="conv-usd" type="number" step="any" placeholder="0.00" class="field" />
           </div>
         </div>
       </section>
 
       <section class="panel-box">
-        <div class="tool-subtabs">
-          <button class="subtab-btn active" data-subtool="calc">POSITION CALCULATOR</button>
-          <button class="subtab-btn" data-subtool="notes">SCRATCHPAD</button>
+        <div class="box-row">
+          <span class="label">POSITION &amp; RISK CALCULATOR</span>
+          <span class="muted-mono" id="rr-badge">R:R 1 : 3.5</span>
         </div>
-
-        <div id="subtool-calc" class="subtool-pane">
-          <div class="box-row">
-            <span class="muted-mono">SOL / USD CONVERTER</span>
-            <span class="muted-mono" id="calc-sol-rate">1 SOL = —</span>
+        <div class="pnl-grid-4">
+          <div class="calc-field">
+            <label>SIZE ($)</label>
+            <input id="pnl-size" type="number" step="any" value="500" class="field" />
           </div>
-          <div class="calc-conv-row">
-            <div class="calc-field">
-              <label>SOL</label>
-              <input id="conv-sol" type="number" step="any" value="1" class="field" />
-            </div>
-            <span class="swap-sep">=</span>
-            <div class="calc-field">
-              <label>USD</label>
-              <input id="conv-usd" type="number" step="any" placeholder="0.00" class="field" />
-            </div>
+          <div class="calc-field">
+            <label>ENTRY ($)</label>
+            <input id="pnl-entry" type="number" step="any" value="100" class="field" />
           </div>
-          <div class="pnl-grid">
-            <div class="calc-field">
-              <label>SIZE ($)</label>
-              <input id="pnl-size" type="number" step="any" value="500" class="field" />
-            </div>
-            <div class="calc-field">
-              <label>ENTRY ($)</label>
-              <input id="pnl-entry" type="number" step="any" value="100" class="field" />
-            </div>
-            <div class="calc-field">
-              <label>TARGET ($)</label>
-              <input id="pnl-target" type="number" step="any" value="135" class="field" />
-            </div>
+          <div class="calc-field">
+            <label>TARGET ($)</label>
+            <input id="pnl-target" type="number" step="any" value="135" class="field" />
           </div>
-          <div class="pnl-result" id="pnl-result">ROI +35.0%  |  Net +$175.00  |  Total $675.00</div>
+          <div class="calc-field">
+            <label>STOP ($)</label>
+            <input id="pnl-stop" type="number" step="any" value="90" class="field" />
+          </div>
         </div>
+        <div class="pnl-split">
+          <div class="pnl-box up" id="pnl-result">TARGET: +35.0% (+$175.00)</div>
+          <div class="pnl-box down" id="pnl-risk">STOP: -10.0% (-$50.00)</div>
+        </div>
+      </section>
 
-        <div id="subtool-notes" class="subtool-pane" style="display: none">
-          <div class="box-row">
-            <span class="muted-mono">LOCAL NOTES (AUTO-SAVED)</span>
-            <div style="display: flex; gap: 6px">
-              <button class="inline-btn" id="btn-copy-notes">COPY</button>
-              <button class="inline-btn" id="btn-clear-notes">CLEAR</button>
-            </div>
+      <section class="panel-box">
+        <div class="box-row">
+          <span class="label">SCRATCHPAD (LOCAL AUTO-SAVE)</span>
+          <div style="display: flex; gap: 5px">
+            <button class="inline-btn" id="btn-copy-notes">COPY</button>
+            <button class="inline-btn" id="btn-clear-notes">CLEAR</button>
           </div>
-          <textarea
-            id="alpha-notes"
-            rows="4"
-            class="field notes-area"
-            placeholder="Save contract addresses, price levels, or quick notes..."
-          ></textarea>
+        </div>
+        <textarea
+          id="alpha-notes"
+          rows="4"
+          class="field notes-area"
+          placeholder="Save contract addresses, key levels, or quick notes..."
+        ></textarea>
+      </section>
+
+      <section class="panel-box compact-box">
+        <div class="box-row">
+          <span class="muted-mono">LIVE VOICE AI CHAT IS AVAILABLE ON THE WEB TERMINAL</span>
+          <a class="hdr-btn link" href="https://yuzuha-simulator.vercel.app" target="_blank" rel="noopener">OPEN CHAT</a>
         </div>
       </section>
     </main>

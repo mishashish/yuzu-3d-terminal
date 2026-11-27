@@ -11,7 +11,6 @@ let activePageCtx = null;
 let selectedFocusMin = 25;
 let selectedFocusMode = 'focus';
 let stageMode = 'strip'; // 'strip' | 'expanded' | 'collapsed'
-let aiHistory = [];
 
 const BAG_COINS = ['SOL', 'BTC', 'ETH', 'JUP'];
 
@@ -160,18 +159,6 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
   btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
 });
 
-// Sub-tool switcher in Tab 4
-document.querySelectorAll('.subtab-btn').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const target = btn.getAttribute('data-subtool');
-    document.querySelectorAll('.subtab-btn').forEach((b) => b.classList.toggle('active', b === btn));
-    const calcPane = document.getElementById('subtool-calc');
-    const notesPane = document.getElementById('subtool-notes');
-    if (calcPane) calcPane.style.display = target === 'calc' ? 'flex' : 'none';
-    if (notesPane) notesPane.style.display = target === 'notes' ? 'flex' : 'none';
-  });
-});
-
 window.addEventListener('keydown', (e) => {
   const tag = document.activeElement?.tagName;
   const inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
@@ -181,7 +168,7 @@ window.addEventListener('keydown', (e) => {
     document.getElementById('scan-input')?.focus();
   } else if (e.altKey && ['1', '2', '3', '4'].includes(e.key)) {
     e.preventDefault();
-    const map = { '1': 'pulse', '2': 'scan', '3': 'focus', '4': 'ai' };
+    const map = { '1': 'pulse', '2': 'scan', '3': 'focus', '4': 'tools' };
     switchTab(map[e.key]);
   }
 });
@@ -931,139 +918,8 @@ document.getElementById('btn-reset-webstats')?.addEventListener('click', async (
 });
 
 // =========================================================================
-// TAB 4: ASSISTANT, CONVERTER, POSITION SIZER & NOTES
+// TAB 4: LOCAL TOOLS (CONVERTER, R:R POSITION SIZER & NOTES — ZERO AI TOKENS)
 // =========================================================================
-async function askYuzuAI(userPrompt, fallbackBuilder) {
-  const outTxt = document.getElementById('ai-output-text');
-  const outActs = document.getElementById('ai-out-actions');
-  const sendBtn = document.getElementById('btn-ai-send');
-  if (outTxt) {
-    outTxt.classList.remove('ai-placeholder');
-    outTxt.textContent = 'Generating response...';
-  }
-  if (outActs) outActs.style.display = 'none';
-  if (sendBtn) sendBtn.disabled = true;
-
-  const sysPrompt =
-    'You are Yuzu, a concise, analytical assistant inside a Chrome market & productivity terminal. ' +
-    'Reply in the SAME language the user writes in (Russian, Ukrainian, or English). ' +
-    'STRICT RULE: Never use any emojis, hashtags, or hype cliches. Keep answers direct, clear, and under 3 short sentences.';
-
-  let reply = '';
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 9500);
-    const messages = [
-      { role: 'system', content: sysPrompt },
-      ...aiHistory.slice(-4),
-      { role: 'user', content: userPrompt },
-    ];
-    const r = await fetch('https://yuzuha-simulator.vercel.app/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: ctrl.signal,
-      body: JSON.stringify({ messages }),
-    });
-    clearTimeout(timer);
-    if (r.ok) {
-      const j = await r.json();
-      if (j?.content) reply = stripEmojis(j.content);
-    }
-  } catch {}
-
-  if (!reply) {
-    reply = stripEmojis(fallbackBuilder ? fallbackBuilder() : 'Assistant endpoint is busy. Try again shortly.');
-  }
-
-  aiHistory.push({ role: 'user', content: userPrompt.slice(0, 350) }, { role: 'assistant', content: reply.slice(0, 350) });
-  if (aiHistory.length > 6) aiHistory = aiHistory.slice(-6);
-
-  if (outTxt) outTxt.textContent = reply;
-  if (outActs) outActs.style.display = 'flex';
-  if (sendBtn) sendBtn.disabled = false;
-  setYuzuLine(reply.slice(0, 170) + (reply.length > 170 ? '...' : ''), 'peace');
-}
-
-document.querySelectorAll('button[data-ai-act]').forEach((btn) => {
-  btn.addEventListener('click', async () => {
-    const act = btn.getAttribute('data-ai-act');
-    const st = await chrome.storage.local.get(['webStats', 'focusStats']);
-    const dayWeb = st.webStats?.[todayKey()];
-    const dayFocus = st.focusStats?.[todayKey()];
-
-    if (act === 'summarize') {
-      const srcText = activePageCtx?.selection || activePageCtx?.snippet || '';
-      const title = activePageCtx?.title || 'Current Tab';
-      if (!srcText) {
-        askYuzuAI(`Give a concise note on how to use page summarization.`, () =>
-          `Open any article, documentation page, or thread (or highlight text first) and click Summarize Page for a 3-point overview.`
-        );
-        return;
-      }
-      askYuzuAI(
-        `Summarize this page ("${title}") in 3 clear, factual bullet points using plain dashes (-), no emojis:\n\n${srcText.slice(0, 1600)}`,
-        () => {
-          const sentences = srcText.split(/(?<=[.!?])\s+/).filter((s) => s.length > 25).slice(0, 3);
-          return `- ${title}\n- ${sentences.join('\n- ') || srcText.slice(0, 220)}`;
-        }
-      );
-    } else if (act === 'xreply') {
-      const tweet = activePageCtx?.selection || activePageCtx?.snippet?.slice(0, 700) || '';
-      askYuzuAI(
-        tweet
-          ? `Write 2 short, sharp X reply options (under 180 chars each, zero emojis, zero hashtags) responding to:\n"${tweet}"`
-          : `Write 2 short, sharp market observation lines suitable for X (zero emojis, zero hashtags).`,
-        () =>
-          `1) Conviction gets tested in chop long before the breakout arrives.\n2) Liquidity and execution matter more than timeline narratives.`
-      );
-    } else if (act === 'market') {
-      const mSummary = currentMarket.map((m) => `${m.sym} $${m.price} (${m.pct >= 0 ? '+' : ''}${m.pct.toFixed(1)}%)`).join(', ');
-      const fgTxt = currentFG ? `Fear & Greed: ${currentFG.value} (${currentFG.label})` : '';
-      const tpsTxt = currentSolNet?.tps ? `Solana TPS: ${currentSolNet.tps}` : '';
-      askYuzuAI(
-        `Provide a concise 3-sentence market assessment (no emojis): ${fgTxt}, ${tpsTxt}. Prices: ${mSummary}.`,
-        () => buildBrief(currentMarket, currentFG, currentSolNet)
-      );
-    } else if (act === 'roast') {
-      const tot = fmtDuration(dayWeb?.totalSec || 0);
-      const soc = fmtDuration(dayWeb?.categories?.social || 0);
-      const cry = fmtDuration(dayWeb?.categories?.crypto || 0);
-      const wrk = fmtDuration(dayWeb?.categories?.work || 0);
-      const fSessions = dayFocus?.sessions || 0;
-      askYuzuAI(
-        `Give a direct, dry-witted 2-sentence review of today's browser activity (no emojis): Total ${tot}, Work ${wrk}, Social ${soc}, Markets ${cry}, Focus sessions: ${fSessions}.`,
-        () =>
-          `Logged ${tot} today: ${wrk} in work tools, ${soc} on social feeds, ${cry} on charts, and ${fSessions} focus sessions.`
-      );
-    }
-  });
-});
-
-document.getElementById('btn-ai-send')?.addEventListener('click', () => {
-  const inp = document.getElementById('ai-prompt-input');
-  const q = inp?.value?.trim();
-  if (!q) return;
-  inp.value = '';
-  askYuzuAI(q, () => `Assistant relay is temporarily busy. Please try again in a few seconds.`);
-});
-document.getElementById('ai-prompt-input')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('btn-ai-send')?.click();
-});
-
-document.getElementById('btn-ai-copy')?.addEventListener('click', (e) => {
-  const txt = document.getElementById('ai-output-text')?.textContent || '';
-  if (txt) {
-    navigator.clipboard?.writeText(txt);
-    e.currentTarget.textContent = 'COPIED';
-    setTimeout(() => (e.currentTarget.textContent = 'COPY'), 1200);
-  }
-});
-document.getElementById('btn-ai-speak')?.addEventListener('click', () => {
-  const txt = document.getElementById('ai-output-text')?.textContent || '';
-  speakText(txt);
-});
-
-// SOL Converter & Position Sizer
 let liveSolPrice = 0;
 const convSol = document.getElementById('conv-sol');
 const convUsd = document.getElementById('conv-usd');
@@ -1093,17 +949,34 @@ function recalcPnL() {
   const size = parseFloat(document.getElementById('pnl-size')?.value || '0') || 0;
   const entry = parseFloat(document.getElementById('pnl-entry')?.value || '0') || 0;
   const target = parseFloat(document.getElementById('pnl-target')?.value || '0') || 0;
-  const out = document.getElementById('pnl-result');
-  if (!out || entry <= 0 || size <= 0) return;
-  const roi = ((target - entry) / entry) * 100;
-  const profit = size * (roi / 100);
-  const sign = roi >= 0 ? '+' : '';
-  out.textContent = `ROI ${sign}${roi.toFixed(1)}%  |  Net ${sign}$${profit.toFixed(2)}  |  Total $${(size + profit).toFixed(2)}`;
-  out.style.color = roi >= 0 ? '#c8ff78' : '#f87171';
-  out.style.background = roi >= 0 ? 'rgba(200,255,120,0.1)' : 'rgba(248,113,113,0.11)';
-  out.style.borderColor = roi >= 0 ? 'rgba(200,255,120,0.32)' : 'rgba(248,113,113,0.35)';
+  const stop = parseFloat(document.getElementById('pnl-stop')?.value || '0') || 0;
+  const outTarget = document.getElementById('pnl-result');
+  const outRisk = document.getElementById('pnl-risk');
+  const rrBadge = document.getElementById('rr-badge');
+  if (entry <= 0 || size <= 0) return;
+
+  const targetRoi = ((target - entry) / entry) * 100;
+  const targetUsd = size * (targetRoi / 100);
+  const tSign = targetRoi >= 0 ? '+' : '-';
+  if (outTarget) {
+    outTarget.textContent = `TARGET: ${tSign}${Math.abs(targetRoi).toFixed(1)}% (${tSign}$${Math.abs(targetUsd).toFixed(2)})`;
+  }
+
+  const stopRoi = stop > 0 ? ((stop - entry) / entry) * 100 : 0;
+  const stopUsd = size * (stopRoi / 100);
+  const sSign = stopRoi >= 0 ? '+' : '-';
+  if (outRisk) {
+    outRisk.textContent =
+      stop > 0 ? `STOP: ${sSign}${Math.abs(stopRoi).toFixed(1)}% (${sSign}$${Math.abs(stopUsd).toFixed(2)})` : 'STOP: —';
+  }
+
+  const rewardAbs = Math.abs(target - entry);
+  const riskAbs = stop > 0 ? Math.abs(entry - stop) : 0;
+  if (rrBadge) {
+    rrBadge.textContent = riskAbs > 0 ? `R:R 1 : ${(rewardAbs / riskAbs).toFixed(2)}` : 'R:R —';
+  }
 }
-['pnl-size', 'pnl-entry', 'pnl-target'].forEach((id) => {
+['pnl-size', 'pnl-entry', 'pnl-target', 'pnl-stop'].forEach((id) => {
   document.getElementById(id)?.addEventListener('input', recalcPnL);
 });
 recalcPnL();
@@ -1130,7 +1003,7 @@ document.getElementById('btn-clear-notes')?.addEventListener('click', () => {
 });
 
 // =========================================================================
-// RIGHT-CLICK CONTEXT MENU HANDOFF
+// RIGHT-CLICK CONTEXT MENU HANDOFF (SCANNER ONLY)
 // =========================================================================
 async function consumePendingAction(action) {
   if (!action || Date.now() - (action.ts || 0) > 60000) return;
@@ -1138,12 +1011,6 @@ async function consumePendingAction(action) {
   if (action.type === 'scan' && action.query) {
     switchTab('scan');
     triggerTokenScan(action.query);
-  } else if (action.type === 'ai' && action.text) {
-    switchTab('ai');
-    askYuzuAI(
-      `Analyze this selected text concisely (no emojis):\n"${action.text}"`,
-      () => `Selected text: "${action.text.slice(0, 180)}"`
-    );
   }
 }
 
