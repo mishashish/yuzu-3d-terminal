@@ -16,28 +16,48 @@
       <div class="brand">
         <span class="dot" id="status-dot"></span>
         <span class="brand-name">$YUZU</span>
-        <span class="ver-pill">TERMINAL</span>
+        <span class="ver-pill">v2.5</span>
       </div>
       <div class="head-right">
         <span class="tag" id="feed-meta">SYNCING</span>
-        <button class="hdr-btn" id="btn-open-sidepanel" title="Open in Chrome Side Panel">PANEL</button>
-        <button class="hdr-btn" id="btn-toggle-3d" title="Toggle 3D stage size">3D</button>
-        <a class="hdr-btn link" href="https://yuzuha-simulator.vercel.app" target="_blank" rel="noopener">APP</a>
+        <button class="hdr-btn" id="btn-open-sidepanel" title="Open full height in Chrome Side Panel">PANEL</button>
+        <button class="hdr-btn active" id="btn-toggle-3d" title="Show or hide 3D Yuzu stage">3D ON</button>
+        <a class="hdr-btn link" href="https://yuzuha-simulator.vercel.app" target="_blank" rel="noopener">WEB 3D</a>
       </div>
     </header>
 
-    <!-- Sleek Horizontal Companion Strip (Expandable to Full 3D View) -->
-    <section class="companion-card" id="mini-stage-card">
-      <div class="mini-3d-wrap" id="mini-3d-wrap" title="Click 3D VIEW to expand or collapse">
-        <div class="mini-boot"><span>3D</span></div>
+    <!-- Prominent Interactive 3D Yuzu Stage -->
+    <section class="hero-stage-card" id="mini-stage-card">
+      <div class="hero-3d-viewport" id="mini-3d-wrap">
+        <div class="mini-boot" id="mini-boot-label">LOADING 3D YUZU...</div>
         <iframe id="yuzu-3d-frame" allow="autoplay" title="Yuzu 3D Companion"></iframe>
-      </div>
-      <div class="companion-copy">
-        <div class="companion-top">
-          <span class="label">LIVE BRIEF</span>
-          <button class="inline-btn" id="btn-speak">SPEAK</button>
+
+        <!-- Top-Left Interactive Pose Controls -->
+        <div class="stage-hud stage-hud-left">
+          <button class="stage-chip" data-pose="headpat" title="Pet Yuzu">PET</button>
+          <button class="stage-chip" data-pose="wave" title="Wave">WAVE</button>
+          <button class="stage-chip" data-pose="dance" title="Dance">DANCE</button>
         </div>
-        <p class="yuzu-speech" id="yuzu-speech">Connecting to market feeds and Solana RPC...</p>
+
+        <!-- Top-Right Camera, Outfit & Voice Controls -->
+        <div class="stage-hud stage-hud-right">
+          <button class="stage-chip" id="btn-stage-cam" title="Switch 3D camera zoom">CAM: CLOSE</button>
+          <button class="stage-chip" id="btn-stage-outfit" title="Switch Yuzu outfit style">OUTFIT</button>
+          <button class="stage-chip accent" id="btn-speak" title="Voice live market brief">SPEAK</button>
+        </div>
+
+        <!-- Bottom Live Brief Overlay -->
+        <div class="stage-brief-bar">
+          <span class="brief-tag">LIVE</span>
+          <p class="yuzu-speech" id="yuzu-speech">Syncing custom crypto watchlist and Solana RPC...</p>
+        </div>
+      </div>
+
+      <!-- Compact Fallback Bar when 3D is hidden -->
+      <div class="compact-brief-row" id="compact-brief-row">
+        <span class="brief-tag">BRIEF</span>
+        <p class="yuzu-speech-compact" id="yuzu-speech-compact">Syncing custom crypto watchlist...</p>
+        <button class="inline-btn" id="btn-speak-compact">SPEAK</button>
       </div>
     </section>
 
@@ -50,9 +70,38 @@
     </nav>
 
     <!-- ========================================================= -->
-    <!-- TAB 1: MARKET                                             -->
+    <!-- TAB 1: MARKET (SEARCH ANY CRYPTO + CUSTOM WATCHLIST)      -->
     <!-- ========================================================= -->
     <main class="tab-panel active" id="tab-pulse">
+      <!-- Universal Crypto Search & Quick-Add -->
+      <section class="market-search-box">
+        <div class="search-input-wrap">
+          <input
+            id="market-search-input"
+            type="text"
+            placeholder="Search coin, ticker, or CA (SUI, DOGE, HYPE...)"
+            class="field search-field"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="search-clear-btn" id="btn-clear-msearch" style="display: none" title="Clear search">×</button>
+          <button class="inline-btn" id="btn-toggle-popular" title="Browse popular coins">+ TOP</button>
+        </div>
+
+        <!-- Popular 1-Click Coins Drawer -->
+        <div class="popular-drawer" id="popular-drawer" style="display: none">
+          <div class="box-row">
+            <span class="label">POPULAR COINS (1-CLICK TRACK)</span>
+            <button class="inline-btn" id="btn-reset-watchlist" title="Restore default coins">RESET DEFAULT</button>
+          </div>
+          <div class="chip-wrap" id="popular-chips"></div>
+        </div>
+
+        <!-- Live Global Search Results Dropdown -->
+        <div class="search-results-panel" id="market-search-results" style="display: none"></div>
+      </section>
+
+      <!-- 3-Column Macro KPI Strip -->
       <section class="kpi-strip">
         <div class="kpi-tile">
           <div class="kpi-head">
@@ -69,7 +118,7 @@
         </div>
 
         <div class="kpi-tile">
-          <span class="label">24H BREADTH</span>
+          <span class="label">WATCHLIST 24H</span>
           <b id="macro-breadth" class="kpi-num">—</b>
           <span id="macro-vol" class="kpi-sub">Vol —</span>
         </div>
@@ -81,41 +130,36 @@
         </div>
       </section>
 
-      <!-- Local Portfolio Bar -->
+      <!-- Local Portfolio Bar (Supports All Tracked Coins) -->
       <section class="panel-box compact-box">
         <div class="box-row">
           <div class="bag-summary">
             <span class="label">PORTFOLIO</span>
             <b id="bag-total-val" class="mono-val">$0.00</b>
-            <span id="bag-24h-pnl" class="muted-mono">No holdings set</span>
+            <span id="bag-24h-pnl" class="muted-mono">Click any coin or BAGS to set qty</span>
           </div>
-          <button class="inline-btn" id="btn-edit-bags">EDIT</button>
+          <button class="inline-btn" id="btn-edit-bags">BAGS</button>
         </div>
         <div id="bag-editor" class="bag-editor" style="display: none">
           <div class="bag-inputs-grid" id="bag-inputs-grid"></div>
-          <span class="hint-line">Saved locally in browser storage. No wallet connection required.</span>
+          <span class="hint-line">Stored locally in browser. Zero wallet connection required.</span>
         </div>
       </section>
 
-      <!-- Spot Market Table -->
+      <!-- Custom Watchlist Table -->
       <section class="panel-box table-box">
+        <div class="watchlist-top-bar">
+          <span class="label" id="watchlist-count-lbl">WATCHLIST</span>
+          <span class="hint-line">Click any row for Holdings, Badge &amp; Alerts</span>
+        </div>
         <div class="table-head">
-          <span>ASSET</span>
+          <button class="th-sort active" data-sort="default">ASSET</button>
           <span>24H RANGE</span>
-          <span class="r">PRICE</span>
-          <span class="r">24H</span>
-          <span class="c">ALERT</span>
+          <button class="th-sort r" data-sort="price">PRICE</button>
+          <button class="th-sort r" data-sort="pct">24H %</button>
+          <span class="c">DEL</span>
         </div>
         <div class="coin-rows" id="coin-list"></div>
-      </section>
-
-      <!-- Pinned On-Chain Watchlist -->
-      <section class="panel-box table-box" id="pinned-watchlist-box" style="display: none">
-        <div class="box-row" style="padding: 0 2px 4px">
-          <span class="label">PINNED WATCHLIST</span>
-          <span class="muted-mono" id="pinned-count-lbl">0 tokens</span>
-        </div>
-        <div class="coin-rows" id="pinned-list"></div>
       </section>
 
       <!-- Price Target Alerts -->
@@ -125,15 +169,7 @@
           <span class="muted-mono" id="alert-count-lbl">0 active</span>
         </div>
         <div class="alert-form">
-          <select id="alert-sym" class="field sm">
-            <option value="SOL">SOL</option>
-            <option value="BTC">BTC</option>
-            <option value="ETH">ETH</option>
-            <option value="WIF">WIF</option>
-            <option value="BONK">BONK</option>
-            <option value="PEPE">PEPE</option>
-            <option value="JUP">JUP</option>
-          </select>
+          <select id="alert-sym" class="field sm"></select>
           <select id="alert-cond" class="field sm">
             <option value="above">&gt;=</option>
             <option value="below">&lt;=</option>
@@ -172,9 +208,9 @@
 
       <section id="scan-result-card" class="panel-box scan-card">
         <div class="empty-state">
-          <p class="empty-title">Token &amp; Liquidity Audit</p>
+          <p class="empty-title">On-Chain Liquidity &amp; Contract Audit</p>
           <p class="empty-desc">
-            Paste any Solana contract address or token symbol above. You can also highlight any address on X or a webpage, right-click, and choose <b>Scan in $YUZU Scanner</b>.
+            Paste any Solana or EVM contract address or ticker above to inspect DEX liquidity, 24h buy/sell pressure, LP locks, and add directly to your Market watchlist.
           </p>
         </div>
       </section>
@@ -221,22 +257,25 @@
     </main>
 
     <!-- ========================================================= -->
-    <!-- TAB 4: TOOLS (100% Local Converter, R:R Sizer & Notes)    -->
+    <!-- TAB 4: TOOLS (ANY-COIN CONVERTER, R:R SIZER & NOTES)      -->
     <!-- ========================================================= -->
     <main class="tab-panel" id="tab-tools">
       <section class="panel-box">
         <div class="box-row">
-          <span class="label">SOL / USD CONVERTER</span>
-          <span class="muted-mono" id="calc-sol-rate">1 SOL = —</span>
+          <span class="label">CRYPTO / USD CONVERTER</span>
+          <span class="muted-mono" id="calc-coin-rate">1 SOL = —</span>
         </div>
         <div class="calc-conv-row">
           <div class="calc-field">
-            <label>SOL</label>
-            <input id="conv-sol" type="number" step="any" value="1" class="field" />
+            <label>ASSET &amp; AMOUNT</label>
+            <div class="conv-asset-group">
+              <select id="conv-sym" class="field sm"></select>
+              <input id="conv-coin" type="number" step="any" value="1" class="field" />
+            </div>
           </div>
           <span class="swap-sep">=</span>
           <div class="calc-field">
-            <label>USD</label>
+            <label>USD VALUE</label>
             <input id="conv-usd" type="number" step="any" placeholder="0.00" class="field" />
           </div>
         </div>
@@ -298,7 +337,7 @@
     <footer class="foot">
       <button class="foot-btn" id="btn-widget">OVERLAY: ON</button>
       <button class="foot-btn" id="btn-alerts">ALERTS: ON</button>
-      <button class="foot-btn icon-only" id="btn-refresh" title="Refresh data">REFRESH</button>
+      <button class="foot-btn icon-only" id="btn-refresh" title="Refresh watchlist">REFRESH</button>
     </footer>
 
     <script src="popup.js"></script>

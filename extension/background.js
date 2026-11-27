@@ -1,11 +1,52 @@
-const COINS = [
-  { sym: 'SOL', okx: 'SOL-USDT', binance: 'SOLUSDT', cg: 'solana' },
-  { sym: 'BTC', okx: 'BTC-USDT', binance: 'BTCUSDT', cg: 'bitcoin' },
-  { sym: 'ETH', okx: 'ETH-USDT', binance: 'ETHUSDT', cg: 'ethereum' },
-  { sym: 'WIF', okx: 'WIF-USDT', binance: 'WIFUSDT', cg: 'dogwifcoin' },
-  { sym: 'BONK', okx: 'BONK-USDT', binance: 'BONKUSDT', cg: 'bonk' },
-  { sym: 'PEPE', okx: 'PEPE-USDT', binance: 'PEPEUSDT', cg: 'pepe' },
-  { sym: 'JUP', okx: 'JUP-USDT', binance: 'JUPUSDT', cg: 'jupiter-exchange-solana' },
+// =========================================================================
+// $YUZU EXTENSION v2.5.0 — UNIVERSAL CRYPTO WATCHLIST, SEARCH & SCANNER
+// =========================================================================
+
+const KNOWN_CEX_CATALOG = [
+  { sym: 'SOL', name: 'Solana', binance: 'SOLUSDT', okx: 'SOL-USDT', cg: 'solana' },
+  { sym: 'BTC', name: 'Bitcoin', binance: 'BTCUSDT', okx: 'BTC-USDT', cg: 'bitcoin' },
+  { sym: 'ETH', name: 'Ethereum', binance: 'ETHUSDT', okx: 'ETH-USDT', cg: 'ethereum' },
+  { sym: 'SUI', name: 'Sui', binance: 'SUIUSDT', okx: 'SUI-USDT', cg: 'sui' },
+  { sym: 'JUP', name: 'Jupiter', binance: 'JUPUSDT', okx: 'JUP-USDT', cg: 'jupiter-exchange-solana' },
+  { sym: 'WIF', name: 'dogwifhat', binance: 'WIFUSDT', okx: 'WIF-USDT', cg: 'dogwifcoin' },
+  { sym: 'BONK', name: 'Bonk', binance: 'BONKUSDT', okx: 'BONK-USDT', cg: 'bonk' },
+  { sym: 'PEPE', name: 'Pepe', binance: 'PEPEUSDT', okx: 'PEPE-USDT', cg: 'pepe' },
+  { sym: 'XRP', name: 'XRP', binance: 'XRPUSDT', okx: 'XRP-USDT', cg: 'ripple' },
+  { sym: 'DOGE', name: 'Dogecoin', binance: 'DOGEUSDT', okx: 'DOGE-USDT', cg: 'dogecoin' },
+  { sym: 'BNB', name: 'BNB', binance: 'BNBUSDT', okx: 'BNB-USDT', cg: 'binancecoin' },
+  { sym: 'ADA', name: 'Cardano', binance: 'ADAUSDT', okx: 'ADA-USDT', cg: 'cardano' },
+  { sym: 'TRX', name: 'TRON', binance: 'TRXUSDT', okx: 'TRX-USDT', cg: 'tron' },
+  { sym: 'AVAX', name: 'Avalanche', binance: 'AVAXUSDT', okx: 'AVAX-USDT', cg: 'avalanche-2' },
+  { sym: 'TON', name: 'Toncoin', binance: 'TONUSDT', okx: 'TON-USDT', cg: 'the-open-network' },
+  { sym: 'LINK', name: 'Chainlink', binance: 'LINKUSDT', okx: 'LINK-USDT', cg: 'chainlink' },
+  { sym: 'HYPE', name: 'Hyperliquid', binance: null, okx: 'HYPE-USDT', cg: 'hyperliquid' },
+  { sym: 'RENDER', name: 'Render', binance: 'RENDERUSDT', okx: 'RENDER-USDT', cg: 'render-token' },
+  { sym: 'NEAR', name: 'NEAR Protocol', binance: 'NEARUSDT', okx: 'NEAR-USDT', cg: 'near' },
+  { sym: 'APT', name: 'Aptos', binance: 'APTUSDT', okx: 'APT-USDT', cg: 'aptos' },
+  { sym: 'LTC', name: 'Litecoin', binance: 'LTCUSDT', okx: 'LTC-USDT', cg: 'litecoin' },
+  { sym: 'UNI', name: 'Uniswap', binance: 'UNIUSDT', okx: 'UNI-USDT', cg: 'uniswap' },
+  { sym: 'DOT', name: 'Polkadot', binance: 'DOTUSDT', okx: 'DOT-USDT', cg: 'polkadot' },
+  { sym: 'ARB', name: 'Arbitrum', binance: 'ARBUSDT', okx: 'ARB-USDT', cg: 'arbitrum' },
+  { sym: 'OP', name: 'Optimism', binance: 'OPUSDT', okx: 'OP-USDT', cg: 'optimism' },
+  { sym: 'INJ', name: 'Injective', binance: 'INJUSDT', okx: 'INJ-USDT', cg: 'injective-protocol' },
+  { sym: 'TIA', name: 'Celestia', binance: 'TIAUSDT', okx: 'TIA-USDT', cg: 'celestia' },
+  { sym: 'SEI', name: 'Sei', binance: 'SEIUSDT', okx: 'SEI-USDT', cg: 'sei-network' },
+  { sym: 'AAVE', name: 'Aave', binance: 'AAVEUSDT', okx: 'AAVE-USDT', cg: 'aave' },
+  { sym: 'RAY', name: 'Raydium', binance: 'RAYUSDT', okx: 'RAY-USDT', cg: 'raydium' },
+  { sym: 'PYTH', name: 'Pyth Network', binance: 'PYTHUSDT', okx: 'PYTH-USDT', cg: 'pyth-network' },
+  { sym: 'PENGU', name: 'Pudgy Penguins', binance: 'PENGUUSDT', okx: 'PENGU-USDT', cg: 'pudgy-penguins' },
+  { sym: 'TRUMP', name: 'OFFICIAL TRUMP', binance: 'TRUMPUSDT', okx: 'TRUMP-USDT', cg: 'official-trump' },
+  { sym: 'SHIB', name: 'Shiba Inu', binance: 'SHIBUSDT', okx: 'SHIB-USDT', cg: 'shiba-inu' },
+  { sym: 'FET', name: 'Artificial Superintelligence', binance: 'FETUSDT', okx: 'FET-USDT', cg: 'fetch-ai' },
+];
+
+const DEFAULT_WATCHLIST = [
+  { id: 'cex:SOL', sym: 'SOL', name: 'Solana', kind: 'cex', binance: 'SOLUSDT', okx: 'SOL-USDT', cg: 'solana', pinnedTop: true },
+  { id: 'cex:BTC', sym: 'BTC', name: 'Bitcoin', kind: 'cex', binance: 'BTCUSDT', okx: 'BTC-USDT', cg: 'bitcoin', pinnedTop: false },
+  { id: 'cex:ETH', sym: 'ETH', name: 'Ethereum', kind: 'cex', binance: 'ETHUSDT', okx: 'ETH-USDT', cg: 'ethereum', pinnedTop: false },
+  { id: 'cex:SUI', sym: 'SUI', name: 'Sui', kind: 'cex', binance: 'SUIUSDT', okx: 'SUI-USDT', cg: 'sui', pinnedTop: false },
+  { id: 'cex:JUP', sym: 'JUP', name: 'Jupiter', kind: 'cex', binance: 'JUPUSDT', okx: 'JUP-USDT', cg: 'jupiter-exchange-solana', pinnedTop: false },
+  { id: 'cex:WIF', sym: 'WIF', name: 'dogwifhat', kind: 'cex', binance: 'WIFUSDT', okx: 'WIF-USDT', cg: 'dogwifcoin', pinnedTop: false },
 ];
 
 let refreshInFlight = null;
@@ -32,7 +73,36 @@ async function fetchJson(url, timeoutMs = 4800, init = null) {
   }
 }
 
-function updateBadge(market, focusState) {
+async function getActiveWatchlist() {
+  const st = await chrome.storage.local.get(['userWatchlist', 'pinnedTokens', 'watchlistMigratedV25']);
+  let list = Array.isArray(st.userWatchlist) && st.userWatchlist.length ? st.userWatchlist : [...DEFAULT_WATCHLIST];
+
+  // One-time migration of legacy v2.4 pinnedTokens into unified userWatchlist
+  if (!st.watchlistMigratedV25) {
+    if (Array.isArray(st.pinnedTokens) && st.pinnedTokens.length) {
+      for (const pt of st.pinnedTokens) {
+        if (!pt?.address) continue;
+        const id = `dex:${pt.chainId || 'solana'}:${pt.address}`;
+        if (!list.some((x) => x.id.toLowerCase() === id.toLowerCase())) {
+          list.push({
+            id,
+            sym: String(pt.symbol || 'TOKEN').replace(/^\$+/, '').toUpperCase(),
+            name: pt.name || pt.symbol || 'Token',
+            kind: 'dex',
+            address: pt.address,
+            chainId: pt.chainId || 'solana',
+            pairUrl: pt.pairUrl || `https://dexscreener.com/${pt.chainId || 'solana'}/${pt.address}`,
+            pinnedTop: false,
+          });
+        }
+      }
+    }
+    await chrome.storage.local.set({ userWatchlist: list, watchlistMigratedV25: true });
+  }
+  return list;
+}
+
+function updateBadge(market, focusState, badgeSym = 'SOL') {
   try {
     if (focusState?.active && focusState.endsAt > Date.now()) {
       const remMin = Math.max(1, Math.ceil((focusState.endsAt - Date.now()) / 60000));
@@ -41,117 +111,345 @@ function updateBadge(market, focusState) {
       return;
     }
     if (!Array.isArray(market) || !market.length) return;
-    const sol = market.find((m) => m.sym === 'SOL') || market[0];
-    if (!sol || Number.isNaN(sol.pct)) return;
-    const sign = sol.pct >= 0 ? '+' : '';
-    chrome.action.setBadgeText({ text: `${sign}${sol.pct.toFixed(0)}%` });
-    chrome.action.setBadgeBackgroundColor({ color: sol.pct >= 0 ? '#15803d' : '#be123c' });
-  } catch {}
+    const target =
+      market.find((m) => String(m.sym).toUpperCase() === String(badgeSym || 'SOL').toUpperCase()) ||
+      market.find((m) => m.sym === 'SOL') ||
+      market[0];
+    if (!target || Number.isNaN(target.pct)) return;
+    const sign = target.pct >= 0 ? '+' : '';
+    chrome.action.setBadgeText({ text: `${sign}${target.pct.toFixed(0)}%` });
+    chrome.action.setBadgeBackgroundColor({ color: target.pct >= 0 ? '#15803d' : '#be123c' });
+  } catch { }
 }
 
-function enrichBounds(item) {
-  const price = Number(item.price) || 0;
-  const pct = Number(item.pct) || 0;
+function enrichMarketRow(baseMeta, quote) {
+  const price = Number(quote.price) || 0;
+  const pct = Number(quote.pct) || 0;
   const approxSpan = Math.max(Math.abs(pct) / 100, 0.025);
-  const low24h = item.low24h > 0 ? Number(item.low24h) : price * (1 - approxSpan * 0.65);
-  const high24h = item.high24h > 0 ? Number(item.high24h) : price * (1 + approxSpan * 0.65);
+  const low24h = quote.low24h > 0 ? Number(quote.low24h) : price * (1 - approxSpan * 0.65);
+  const high24h = quote.high24h > 0 ? Number(quote.high24h) : price * (1 + approxSpan * 0.65);
+  const defaultChart =
+    baseMeta.kind === 'dex'
+      ? baseMeta.pairUrl || `https://dexscreener.com/${baseMeta.chainId || 'solana'}/${baseMeta.address}`
+      : `https://www.tradingview.com/symbols/${baseMeta.sym}USDT/`;
+
   return {
-    sym: item.sym,
+    id: baseMeta.id,
+    sym: baseMeta.sym,
+    name: baseMeta.name || baseMeta.sym,
+    kind: baseMeta.kind || 'cex',
+    address: baseMeta.address || null,
+    chainId: baseMeta.chainId || null,
+    pinnedTop: !!baseMeta.pinnedTop,
+    chartUrl: quote.chartUrl || defaultChart,
     price,
     pct,
     low24h: Math.min(low24h, price),
     high24h: Math.max(high24h, price),
-    volUsd: Number(item.volUsd) || 0,
+    volUsd: Number(quote.volUsd) || 0,
+    liqUsd: Number(quote.liqUsd) || 0,
   };
 }
 
-function normalizeYuzuApiPayload(j) {
-  if (Array.isArray(j?.market) && j.market.length >= 4) {
-    return j.market.map(enrichBounds);
+// =========================================================================
+// MULTI-SOURCE CEX + DEX WATCHLIST QUOTE FETCHER
+// =========================================================================
+async function fetchCexQuotes(cexItems) {
+  const resolved = new Map();
+  if (!cexItems.length) return { resolved, source: '' };
+  let primarySource = '';
+
+  // 1. Batch Binance for items with a known/candidate Binance symbol
+  const binanceCandidates = cexItems.filter((c) => c.binance);
+  if (binanceCandidates.length) {
+    const symsParam = encodeURIComponent(JSON.stringify([...new Set(binanceCandidates.map((c) => c.binance))]));
+    let arr = await fetchJson(`https://api.binance.com/api/v3/ticker/24hr?symbols=${symsParam}`, 4000);
+
+    // If a custom symbol caused HTTP 400 in batch, probe individually so valid ones still succeed
+    if (!Array.isArray(arr) && binanceCandidates.length > 1) {
+      const indiv = await Promise.all(
+        binanceCandidates.map((c) => fetchJson(`https://api.binance.com/api/v3/ticker/24hr?symbol=${c.binance}`, 3200))
+      );
+      arr = indiv.filter((x) => x && x.symbol && x.lastPrice != null);
+    }
+
+    if (Array.isArray(arr) && arr.length) {
+      primarySource = 'Binance';
+      const byPair = new Map(arr.map((x) => [x.symbol, x]));
+      for (const item of binanceCandidates) {
+        const d = byPair.get(item.binance);
+        if (d && parseFloat(d.lastPrice) > 0) {
+          resolved.set(item.id, {
+            price: parseFloat(d.lastPrice),
+            pct: parseFloat(d.priceChangePercent || 0),
+            high24h: parseFloat(d.highPrice || 0),
+            low24h: parseFloat(d.lowPrice || 0),
+            volUsd: parseFloat(d.quoteVolume || 0),
+          });
+        }
+      }
+    }
   }
-  if (Array.isArray(j) && j.length >= 4) {
-    return j
-      .filter((x) => x && x.symbol && x.lastPrice != null)
-      .map((x) =>
-        enrichBounds({
-          sym: String(x.symbol).replace(/USDT$/i, ''),
-          price: parseFloat(x.lastPrice),
-          pct: parseFloat(x.priceChangePercent || 0),
-          high24h: parseFloat(x.highPrice || 0),
-          low24h: parseFloat(x.lowPrice || 0),
-          volUsd: parseFloat(x.quoteVolume || 0),
-        })
-      )
-      .filter((x) => !Number.isNaN(x.price) && x.price > 0);
+
+  // 2. OKX fallback for any unresolved CEX coins (e.g. HYPE, or if Binance is geo-blocked)
+  const missingAfterBinance = cexItems.filter((c) => !resolved.has(c.id));
+  if (missingAfterBinance.length) {
+    const okxResults = await Promise.all(
+      missingAfterBinance.map(async (c) => {
+        const inst = c.okx || `${c.sym}-USDT`;
+        const j = await fetchJson(`https://www.okx.com/api/v5/market/ticker?instId=${encodeURIComponent(inst)}`, 3600);
+        const d = j?.data?.[0];
+        if (!d || !(parseFloat(d.last) > 0)) return null;
+        const last = parseFloat(d.last);
+        const open = parseFloat(d.open24h);
+        return {
+          id: c.id,
+          quote: {
+            price: last,
+            pct: open > 0 ? ((last - open) / open) * 100 : 0,
+            high24h: parseFloat(d.high24h || 0),
+            low24h: parseFloat(d.low24h || 0),
+            volUsd: parseFloat(d.volCcy24h || 0),
+          },
+        };
+      })
+    );
+    for (const r of okxResults) {
+      if (r) {
+        resolved.set(r.id, r.quote);
+        if (!primarySource) primarySource = 'OKX';
+      }
+    }
   }
-  return null;
+
+  // 3. CoinGecko fallback for long-tail CEX coins with a CoinGecko ID
+  const missingAfterOkx = cexItems.filter((c) => !resolved.has(c.id) && c.cg);
+  if (missingAfterOkx.length) {
+    const ids = [...new Set(missingAfterOkx.map((c) => c.cg))].join(',');
+    const j = await fetchJson(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(ids)}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true`,
+      4200
+    );
+    if (j) {
+      for (const c of missingAfterOkx) {
+        const d = j[c.cg];
+        if (d?.usd != null) {
+          resolved.set(c.id, {
+            price: Number(d.usd),
+            pct: Number(d.usd_24h_change || 0),
+            volUsd: Number(d.usd_24h_vol || 0),
+          });
+          if (!primarySource) primarySource = 'CoinGecko';
+        }
+      }
+    }
+  }
+
+  return { resolved, source: primarySource };
 }
 
-async function fetchFromBinance() {
-  const syms = encodeURIComponent(JSON.stringify(COINS.map((c) => c.binance)));
-  const arr = await fetchJson(`https://api.binance.com/api/v3/ticker/24hr?symbols=${syms}`, 4200);
-  if (!Array.isArray(arr) || !arr.length) return null;
-  const map = new Map(arr.map((x) => [x.symbol, x]));
-  const out = COINS.map((c) => {
-    const x = map.get(c.binance);
-    if (!x) return null;
-    return enrichBounds({
-      sym: c.sym,
-      price: parseFloat(x.lastPrice),
-      pct: parseFloat(x.priceChangePercent),
-      high24h: parseFloat(x.highPrice || 0),
-      low24h: parseFloat(x.lowPrice || 0),
-      volUsd: parseFloat(x.quoteVolume || 0),
+async function fetchDexQuotes(dexItems) {
+  const resolved = new Map();
+  if (!dexItems.length) return resolved;
+
+  const addrs = [...new Set(dexItems.map((d) => d.address).filter(Boolean))].slice(0, 25);
+  if (!addrs.length) return resolved;
+
+  const j = await fetchJson(`https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(addrs.join(','))}`, 4800);
+  const pairs = Array.isArray(j?.pairs) ? j.pairs : [];
+  for (const item of dexItems) {
+    const matching = pairs
+      .filter((p) => (p.baseToken?.address || '').toLowerCase() === String(item.address).toLowerCase())
+      .sort((a, b) => (Number(b.liquidity?.usd) || 0) - (Number(a.liquidity?.usd) || 0))[0];
+    if (!matching) continue;
+    resolved.set(item.id, {
+      price: parseFloat(matching.priceUsd || 0),
+      pct: Number(matching.priceChange?.h24 || 0),
+      volUsd: Number(matching.volume?.h24 || 0),
+      liqUsd: Number(matching.liquidity?.usd || 0),
+      chartUrl: matching.url || item.pairUrl,
     });
-  }).filter(Boolean);
-  return out.length >= 4 ? out : null;
+  }
+  return resolved;
 }
 
-async function fetchFromOKX() {
-  const results = await Promise.all(
-    COINS.map(async (c) => {
-      const j = await fetchJson(`https://www.okx.com/api/v5/market/ticker?instId=${c.okx}`, 4200);
-      const d = j?.data?.[0];
-      if (!d) return null;
-      const last = parseFloat(d.last);
-      const open = parseFloat(d.open24h);
-      const pct = open > 0 ? ((last - open) / open) * 100 : 0;
-      return enrichBounds({
-        sym: c.sym,
-        price: last,
-        pct,
-        high24h: parseFloat(d.high24h || 0),
-        low24h: parseFloat(d.low24h || 0),
-        volUsd: parseFloat(d.volCcy24h || 0),
+// =========================================================================
+// UNIVERSAL CRYPTO SEARCH (CEX SPOT + COINGECKO + ON-CHAIN DEX)
+// =========================================================================
+async function searchCrypto(rawQuery) {
+  const q = String(rawQuery || '').trim();
+  if (!q) return { ok: true, results: [] };
+
+  const cleanQ = q.replace(/^\$/, '');
+  const upperQ = cleanQ.toUpperCase();
+  const lowerQ = cleanQ.toLowerCase();
+  const isSolanaCA = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(q);
+  const isEvmCA = /^0x[a-fA-F0-9]{40}$/.test(q);
+
+  // Direct Contract Address lookup via DexScreener
+  if (isSolanaCA || isEvmCA) {
+    const dexJson = await fetchJson(`https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(q)}`, 5000);
+    const pairs = Array.isArray(dexJson?.pairs) ? dexJson.pairs : [];
+    const seen = new Set();
+    const results = [];
+    for (const p of pairs.sort((a, b) => (Number(b.liquidity?.usd) || 0) - (Number(a.liquidity?.usd) || 0))) {
+      const addr = p.baseToken?.address;
+      if (!addr || seen.has(addr.toLowerCase())) continue;
+      seen.add(addr.toLowerCase());
+      const sym = String(p.baseToken?.symbol || 'TOKEN').replace(/^\$+/, '').toUpperCase();
+      results.push({
+        id: `dex:${p.chainId || 'solana'}:${addr}`,
+        sym,
+        name: p.baseToken?.name || sym,
+        kind: 'dex',
+        sourceTag: `${String(p.chainId || 'DEX').toUpperCase()} DEX`,
+        address: addr,
+        chainId: p.chainId || 'solana',
+        pairUrl: p.url || `https://dexscreener.com/${p.chainId}/${addr}`,
+        price: parseFloat(p.priceUsd || 0),
+        pct: Number(p.priceChange?.h24 || 0),
+        volUsd: Number(p.volume?.h24 || 0),
+        liqUsd: Number(p.liquidity?.usd || 0),
       });
-    })
-  );
-  const valid = results.filter(Boolean);
-  return valid.length >= 4 ? valid : null;
-}
+      if (results.length >= 6) break;
+    }
+    return { ok: true, results };
+  }
 
-async function fetchFromYuzuAPI() {
-  const j = await fetchJson('https://yuzuha-simulator.vercel.app/api/crypto', 4000);
-  const parsed = normalizeYuzuApiPayload(j);
-  return parsed && parsed.length >= 4 ? parsed : null;
-}
+  // Parallel CEX Catalog + Binance Direct Ticker + CoinGecko Search + DexScreener Search
+  const catalogMatches = KNOWN_CEX_CATALOG.filter(
+    (c) => c.sym.includes(upperQ) || c.name.toLowerCase().includes(lowerQ)
+  ).slice(0, 5);
 
-async function fetchFromCoinGecko() {
-  const ids = COINS.map((c) => c.cg).join(',');
-  const j = await fetchJson(
-    `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true`,
-    4500
-  );
-  if (!j) return null;
-  const out = COINS.filter((c) => j[c.cg]?.usd != null).map((c) =>
-    enrichBounds({
+  const directBinanceSym = /^[A-Z0-9]{2,10}$/.test(upperQ) ? `${upperQ}USDT` : null;
+
+  const [directBin, cgSearch, dexSearch] = await Promise.all([
+    directBinanceSym ? fetchJson(`https://api.binance.com/api/v3/ticker/24hr?symbol=${directBinanceSym}`, 2800) : Promise.resolve(null),
+    fetchJson(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(cleanQ)}`, 3600),
+    fetchJson(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(cleanQ)}`, 3800),
+  ]);
+
+  const cexCandidates = new Map();
+  for (const c of catalogMatches) {
+    cexCandidates.set(c.sym, { ...c });
+  }
+
+  if (directBin && directBin.symbol && parseFloat(directBin.lastPrice) > 0) {
+    const existing = cexCandidates.get(upperQ) || {
+      sym: upperQ,
+      name: upperQ,
+      binance: directBinanceSym,
+      okx: `${upperQ}-USDT`,
+      cg: null,
+    };
+    existing._quote = {
+      price: parseFloat(directBin.lastPrice),
+      pct: parseFloat(directBin.priceChangePercent || 0),
+      volUsd: parseFloat(directBin.quoteVolume || 0),
+    };
+    cexCandidates.set(upperQ, existing);
+  }
+
+  const cgCoins = Array.isArray(cgSearch?.coins) ? cgSearch.coins.slice(0, 5) : [];
+  for (const cg of cgCoins) {
+    const sym = String(cg.symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!sym) continue;
+    if (!cexCandidates.has(sym)) {
+      cexCandidates.set(sym, {
+        sym,
+        name: cg.name || sym,
+        binance: `${sym}USDT`,
+        okx: `${sym}-USDT`,
+        cg: cg.id || null,
+      });
+    } else if (!cexCandidates.get(sym).cg && cg.id) {
+      cexCandidates.get(sym).cg = cg.id;
+      if (cexCandidates.get(sym).name === sym && cg.name) cexCandidates.get(sym).name = cg.name;
+    }
+  }
+
+  const cexList = [...cexCandidates.values()].slice(0, 5).map((c) => ({
+    id: `cex:${c.sym}`,
+    sym: c.sym,
+    name: c.name,
+    kind: 'cex',
+    binance: c.binance,
+    okx: c.okx,
+    cg: c.cg,
+    _quote: c._quote || null,
+  }));
+
+  const needQuote = cexList.filter((c) => !c._quote);
+  if (needQuote.length) {
+    const { resolved } = await fetchCexQuotes(needQuote);
+    for (const c of needQuote) {
+      if (resolved.has(c.id)) {
+        c._quote = resolved.get(c.id);
+      } else {
+        c.binance = null;
+      }
+    }
+  }
+
+  const results = [];
+  const usedSyms = new Set();
+
+  for (const c of cexList) {
+    if (!c._quote || !(c._quote.price > 0)) continue;
+    usedSyms.add(c.sym);
+    results.push({
+      id: c.id,
       sym: c.sym,
-      price: Number(j[c.cg].usd),
-      pct: Number(j[c.cg].usd_24h_change || 0),
-      volUsd: Number(j[c.cg].usd_24h_vol || 0),
-    })
-  );
-  return out.length >= 4 ? out : null;
+      name: c.name,
+      kind: 'cex',
+      sourceTag: 'SPOT',
+      binance: c.binance,
+      okx: c.okx,
+      cg: c.cg,
+      price: c._quote.price,
+      pct: c._quote.pct || 0,
+      volUsd: c._quote.volUsd || 0,
+      liqUsd: 0,
+    });
+  }
+
+  // Append top liquid on-chain DEX tokens (Solana prioritized)
+  const dexPairs = Array.isArray(dexSearch?.pairs) ? dexSearch.pairs : [];
+  const sortedDex = [...dexPairs]
+    .filter((p) => (Number(p.liquidity?.usd) || 0) >= 2500 && parseFloat(p.priceUsd || 0) > 0)
+    .sort((a, b) => {
+      const boostA = a.chainId === 'solana' ? 1.35 : 1;
+      const boostB = b.chainId === 'solana' ? 1.35 : 1;
+      return (Number(b.liquidity?.usd) || 0) * boostB - (Number(a.liquidity?.usd) || 0) * boostA;
+    });
+
+  const seenAddrs = new Set();
+  for (const p of sortedDex) {
+    const addr = p.baseToken?.address;
+    if (!addr || seenAddrs.has(addr.toLowerCase())) continue;
+    seenAddrs.add(addr.toLowerCase());
+    const sym = String(p.baseToken?.symbol || 'TOKEN').replace(/^\$+/, '').toUpperCase();
+    // Skip duplicate wrapped major tokens if already shown as SPOT
+    if (usedSyms.has(sym) && /^(SOL|WSOL|BTC|WBTC|ETH|WETH|USDC|USDT)$/.test(sym)) continue;
+
+    results.push({
+      id: `dex:${p.chainId || 'solana'}:${addr}`,
+      sym,
+      name: p.baseToken?.name || sym,
+      kind: 'dex',
+      sourceTag: `${String(p.chainId || 'DEX').toUpperCase()} DEX`,
+      address: addr,
+      chainId: p.chainId || 'solana',
+      pairUrl: p.url || `https://dexscreener.com/${p.chainId}/${addr}`,
+      price: parseFloat(p.priceUsd || 0),
+      pct: Number(p.priceChange?.h24 || 0),
+      volUsd: Number(p.volume?.h24 || 0),
+      liqUsd: Number(p.liquidity?.usd || 0),
+    });
+    if (results.length >= 8) break;
+  }
+
+  return { ok: true, results };
 }
 
 async function fetchFearGreed(force = false) {
@@ -205,51 +503,16 @@ async function fetchSolanaTelemetry() {
   }
 }
 
-async function refreshPinnedWatchlist() {
-  try {
-    const { pinnedTokens = [] } = await chrome.storage.local.get('pinnedTokens');
-    if (!Array.isArray(pinnedTokens) || !pinnedTokens.length) return [];
-    const addrs = pinnedTokens.map((t) => t.address).slice(0, 8).join(',');
-    const j = await fetchJson(`https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(addrs)}`, 4800);
-    const pairs = Array.isArray(j?.pairs) ? j.pairs : [];
-    if (!pairs.length) return pinnedTokens;
-
-    const updated = pinnedTokens.map((pt) => {
-      const matching = pairs
-        .filter((p) => (p.baseToken?.address || '').toLowerCase() === pt.address.toLowerCase())
-        .sort((a, b) => (Number(b.liquidity?.usd) || 0) - (Number(a.liquidity?.usd) || 0))[0];
-      if (!matching) return pt;
-      return {
-        ...pt,
-        priceUsd: parseFloat(matching.priceUsd || pt.priceUsd || 0),
-        pct24h: Number(matching.priceChange?.h24 ?? pt.pct24h ?? 0),
-        liquidityUsd: Number(matching.liquidity?.usd ?? pt.liquidityUsd ?? 0),
-        marketCap: Number(matching.marketCap || matching.fdv || pt.marketCap || 0),
-        pairUrl: matching.url || pt.pairUrl,
-      };
-    });
-    await chrome.storage.local.set({ pinnedTokens: updated });
-    return updated;
-  } catch {
-    const { pinnedTokens = [] } = await chrome.storage.local.get('pinnedTokens');
-    return pinnedTokens;
-  }
-}
-
-async function maybeNotifyMoversAndTargets(market, pinned = []) {
+async function maybeNotifyMoversAndTargets(market) {
   try {
     const st = await chrome.storage.local.get(['alertsEnabled', 'lastAlertAt', 'priceAlerts']);
     const alertsOn = st.alertsEnabled !== false;
-    const allAssets = [
-      ...market.map((m) => ({ sym: m.sym, price: m.price, pct: m.pct })),
-      ...pinned.map((p) => ({ sym: p.symbol, price: p.priceUsd, pct: p.pct24h || 0 })),
-    ];
 
     if (alertsOn && Array.isArray(st.priceAlerts) && st.priceAlerts.length) {
       let changed = false;
       const updatedAlerts = st.priceAlerts.map((al) => {
         if (al.triggered) return al;
-        const coin = allAssets.find((m) => m.sym.toUpperCase() === String(al.sym).toUpperCase());
+        const coin = market.find((m) => m.sym.toUpperCase() === String(al.sym).toUpperCase());
         if (!coin) return al;
         const hit =
           (al.condition === 'above' && coin.price >= al.target) ||
@@ -261,7 +524,7 @@ async function maybeNotifyMoversAndTargets(market, pinned = []) {
             type: 'basic',
             iconUrl: 'icons/icon128.png',
             title: `$YUZU Price Alert: ${coin.sym} ${op} $${al.target}`,
-            message: `${coin.sym} is at $${coin.price >= 1 ? coin.price.toFixed(2) : coin.price.toFixed(6)} (${coin.pct >= 0 ? '+' : ''}${coin.pct.toFixed(1)}% 24h).`,
+            message: `${coin.sym} reached $${coin.price >= 1 ? coin.price.toFixed(2) : coin.price.toFixed(6)} (${coin.pct >= 0 ? '+' : ''}${coin.pct.toFixed(1)}% 24h).`,
           });
           return { ...al, triggered: true, triggeredAt: Date.now() };
         }
@@ -285,7 +548,7 @@ async function maybeNotifyMoversAndTargets(market, pinned = []) {
       message: `${bigMover.sym} moved ${sign}${bigMover.pct.toFixed(1)}% over 24h.`,
     });
     await chrome.storage.local.set({ lastAlertAt: Date.now() });
-  } catch {}
+  } catch { }
 }
 
 function ensureAlarm() {
@@ -293,46 +556,53 @@ function ensureAlarm() {
     chrome.alarms.get('yuzuMarketPoll', (existing) => {
       if (!existing) chrome.alarms.create('yuzuMarketPoll', { periodInMinutes: 1 });
     });
-  } catch {}
+  } catch { }
 }
 
 async function _doRefreshMarket() {
   ensureAlarm();
-  let market = null;
-  let source = '';
-  for (const [name, fn] of [
-    ['Binance', fetchFromBinance],
-    ['OKX', fetchFromOKX],
-    ['YUZU API', fetchFromYuzuAPI],
-    ['CoinGecko', fetchFromCoinGecko],
-  ]) {
-    try {
-      market = await fn();
-      if (market) {
-        source = name;
-        break;
-      }
-    } catch {}
-  }
+  const watchlist = await getActiveWatchlist();
+  const ordered = [
+    ...watchlist.filter((w) => w.pinnedTop),
+    ...watchlist.filter((w) => !w.pinnedTop),
+  ];
 
-  const [fearGreed, solNetwork, pinnedTokens, { focusState }] = await Promise.all([
+  const cexItems = ordered.filter((w) => w.kind !== 'dex');
+  const dexItems = ordered.filter((w) => w.kind === 'dex');
+
+  const [cexOut, dexMap, fearGreed, solNetwork, st] = await Promise.all([
+    fetchCexQuotes(cexItems),
+    fetchDexQuotes(dexItems),
     fetchFearGreed(false),
     fetchSolanaTelemetry(),
-    refreshPinnedWatchlist(),
-    chrome.storage.local.get('focusState'),
+    chrome.storage.local.get(['focusState', 'badgeSym', 'market']),
   ]);
 
-  if (!market) {
-    const cached = await chrome.storage.local.get(['market', 'source', 'updatedAt']);
-    updateBadge(cached.market, focusState);
-    return cached.market ? { ...cached, fearGreed, solNetwork, pinnedTokens } : null;
+  const prevById = new Map((st.market || []).map((m) => [m.id || `cex:${m.sym}`, m]));
+  const market = [];
+
+  for (const item of ordered) {
+    const quote = item.kind === 'dex' ? dexMap.get(item.id) : cexOut.resolved.get(item.id);
+    if (quote && quote.price > 0) {
+      market.push(enrichMarketRow(item, quote));
+    } else if (prevById.has(item.id)) {
+      market.push({ ...prevById.get(item.id), pinnedTop: !!item.pinnedTop });
+    }
   }
 
+  const badgeSym = st.badgeSym || 'SOL';
+  if (!market.length) {
+    const cached = await chrome.storage.local.get(['market', 'source', 'updatedAt']);
+    updateBadge(cached.market, st.focusState, badgeSym);
+    return cached.market ? { ...cached, fearGreed, solNetwork, badgeSym } : null;
+  }
+
+  const source = cexOut.source || (dexItems.length ? 'DexScreener' : 'Live');
   const updatedAt = Date.now();
   await chrome.storage.local.set({ market, source, updatedAt });
-  updateBadge(market, focusState);
-  maybeNotifyMoversAndTargets(market, pinnedTokens);
-  return { market, source, updatedAt, fearGreed, solNetwork, pinnedTokens };
+  updateBadge(market, st.focusState, badgeSym);
+  maybeNotifyMoversAndTargets(market);
+  return { market, source, updatedAt, fearGreed, solNetwork, badgeSym };
 }
 
 function refreshMarket() {
@@ -342,6 +612,65 @@ function refreshMarket() {
     });
   }
   return refreshInFlight;
+}
+
+// =========================================================================
+// WATCHLIST MUTATIONS (ADD / REMOVE / PIN TOP / RESET / BADGE COIN)
+// =========================================================================
+async function mutateWatchlist(msg) {
+  let list = await getActiveWatchlist();
+
+  if (msg.action === 'add' && msg.coin) {
+    const c = msg.coin;
+    const id = c.id || (c.kind === 'dex' ? `dex:${c.chainId || 'solana'}:${c.address}` : `cex:${String(c.sym).toUpperCase()}`);
+    const exists = list.some((x) => x.id.toLowerCase() === id.toLowerCase());
+    if (!exists) {
+      const cleanSym = String(c.sym || 'TOKEN').replace(/^\$+/, '').toUpperCase();
+      const entry =
+        c.kind === 'dex'
+          ? {
+              id,
+              sym: cleanSym,
+              name: c.name || cleanSym,
+              kind: 'dex',
+              address: c.address,
+              chainId: c.chainId || 'solana',
+              pairUrl: c.pairUrl || `https://dexscreener.com/${c.chainId || 'solana'}/${c.address}`,
+              pinnedTop: false,
+            }
+          : {
+              id,
+              sym: cleanSym,
+              name: c.name || cleanSym,
+              kind: 'cex',
+              binance: c.binance !== undefined ? c.binance : `${cleanSym}USDT`,
+              okx: c.okx || `${cleanSym}-USDT`,
+              cg: c.cg || null,
+              pinnedTop: false,
+            };
+      list = [...list, entry].slice(0, 24);
+      await chrome.storage.local.set({ userWatchlist: list });
+    }
+  } else if (msg.action === 'remove' && msg.id) {
+    list = list.filter((x) => x.id !== msg.id);
+    if (!list.length) list = [...DEFAULT_WATCHLIST];
+    await chrome.storage.local.set({ userWatchlist: list });
+  } else if (msg.action === 'toggleTop' && msg.id) {
+    list = list.map((x) => (x.id === msg.id ? { ...x, pinnedTop: !x.pinnedTop } : x));
+    await chrome.storage.local.set({ userWatchlist: list });
+  } else if (msg.action === 'reset') {
+    list = [...DEFAULT_WATCHLIST];
+    await chrome.storage.local.set({ userWatchlist: list, badgeSym: 'SOL' });
+  } else if (msg.action === 'setBadge' && msg.sym) {
+    const badgeSym = String(msg.sym).toUpperCase();
+    await chrome.storage.local.set({ badgeSym });
+    const st = await chrome.storage.local.get(['market', 'focusState']);
+    updateBadge(st.market, st.focusState, badgeSym);
+    return { ok: true, badgeSym, market: st.market };
+  }
+
+  const data = await refreshMarket();
+  return data ? { ok: true, ...data } : { ok: true, userWatchlist: list };
 }
 
 // =========================================================================
@@ -444,13 +773,15 @@ async function scanToken(rawQuery) {
   else notes.push(`Balanced order flow (${buyRatioPct}% buys / ${100 - buyRatioPct}% sells).`);
 
   const cleanSymbol = String(best.baseToken?.symbol || 'TOKEN').replace(/^\$+/, '');
+  const chainId = best.chainId || 'solana';
   const token = {
+    id: `dex:${chainId}:${baseAddr}`,
     name: best.baseToken?.name || cleanSymbol || 'Unknown',
     symbol: cleanSymbol,
     address: baseAddr,
-    chainId: best.chainId || 'solana',
+    chainId,
     dexId: best.dexId || 'dex',
-    pairUrl: best.url || `https://dexscreener.com/${best.chainId}/${baseAddr}`,
+    pairUrl: best.url || `https://dexscreener.com/${chainId}/${baseAddr}`,
     priceUsd,
     marketCap,
     liquidityUsd,
@@ -481,7 +812,7 @@ async function scanToken(rawQuery) {
       ...recentScans.filter((s) => s.address !== token.address),
     ].slice(0, 6);
     await chrome.storage.local.set({ recentScans: dedup, lastScan: token });
-  } catch {}
+  } catch { }
 
   return { ok: true, token };
 }
@@ -560,13 +891,13 @@ async function startFocusTimer(minutes = 25, mode = 'focus') {
   };
   await chrome.storage.local.set({ focusState });
   chrome.alarms.create('yuzuFocusEnd', { when: endsAt });
-  const { market } = await chrome.storage.local.get('market');
-  updateBadge(market, focusState);
+  const st = await chrome.storage.local.get(['market', 'badgeSym']);
+  updateBadge(st.market, focusState, st.badgeSym || 'SOL');
   return focusState;
 }
 
 async function stopFocusTimer(completed = false) {
-  const st = await chrome.storage.local.get(['focusState', 'focusStats', 'market', 'alertsEnabled']);
+  const st = await chrome.storage.local.get(['focusState', 'focusStats', 'market', 'alertsEnabled', 'badgeSym']);
   const prev = st.focusState;
   const focusStats = st.focusStats || {};
   const key = todayKey();
@@ -580,7 +911,7 @@ async function stopFocusTimer(completed = false) {
   const nextState = { active: false, mode: 'focus', durationSec: 0, endsAt: 0 };
   await chrome.storage.local.set({ focusState: nextState, focusStats });
   chrome.alarms.clear('yuzuFocusEnd');
-  updateBadge(st.market, nextState);
+  updateBadge(st.market, nextState, st.badgeSym || 'SOL');
 
   if (completed && prev?.active && st.alertsEnabled !== false) {
     const isBreak = prev.mode === 'break';
@@ -597,7 +928,7 @@ async function stopFocusTimer(completed = false) {
 }
 
 // =========================================================================
-// CONTEXT MENUS & SIDE PANEL SETUP (ZERO EMOJIS, ZERO AI CALLS)
+// CONTEXT MENUS & MESSAGE ROUTER (ZERO EMOJIS, ZERO AI CALLS)
 // =========================================================================
 function setupContextMenus() {
   try {
@@ -608,7 +939,7 @@ function setupContextMenus() {
         contexts: ['selection'],
       });
     });
-  } catch {}
+  } catch { }
 }
 
 chrome.contextMenus?.onClicked?.addListener(async (info, tab) => {
@@ -623,7 +954,7 @@ chrome.contextMenus?.onClicked?.addListener(async (info, tab) => {
       await chrome.sidePanel.open({ windowId: tab.windowId });
       return;
     }
-  } catch {}
+  } catch { }
   const res = await scanToken(sel.slice(0, 80));
   if (res.ok && res.token) {
     chrome.notifications.create(`yuzu-ctx-scan-${Date.now()}`, {
@@ -662,6 +993,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       .catch(() => sendResponse({ ok: false }));
     return true;
   }
+  if (msg?.type === 'SEARCH_CRYPTO') {
+    searchCrypto(msg.query)
+      .then((res) => sendResponse(res))
+      .catch((err) => sendResponse({ ok: false, error: String(err?.message || 'Search failed') }));
+    return true;
+  }
+  if (msg?.type === 'WATCHLIST_MUTATE') {
+    mutateWatchlist(msg)
+      .then((res) => sendResponse(res))
+      .catch((err) => sendResponse({ ok: false, error: String(err?.message || 'Update failed') }));
+    return true;
+  }
   if (msg?.type === 'SCAN_TOKEN') {
     scanToken(msg.query)
       .then((res) => sendResponse(res))
@@ -687,8 +1030,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg?.type === 'UPDATE_BADGE' && Array.isArray(msg.market)) {
-    chrome.storage.local.get('focusState').then(({ focusState }) => {
-      updateBadge(msg.market, focusState);
+    chrome.storage.local.get(['focusState', 'badgeSym']).then(({ focusState, badgeSym }) => {
+      updateBadge(msg.market, focusState, badgeSym || 'SOL');
       sendResponse({ ok: true });
     });
     return true;

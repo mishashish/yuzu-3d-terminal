@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "$YUZU — Market Terminal, Token Scanner & Activity Tracker",
-  "version": "2.4.0",
-  "description": "3D Yuzu terminal in Popup & Side Panel: crypto market breadth, Solana TPS, DEX & RugCheck token scanner, screen-time tracker, focus timer & trading tools.",
+  "name": "$YUZU — 3D Companion, Crypto Watchlist & Token Scanner",
+  "version": "2.5.0",
+  "description": "Interactive 3D Yuzu companion with custom crypto search & watchlist, Solana DEX/RugCheck scanner, focus timer, and trading tools.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -43,8 +43,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ]

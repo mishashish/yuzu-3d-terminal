@@ -88,13 +88,14 @@
 
   if (isYuzuTerminal) return;
 
-  // 3. Smoked Obsidian & Chrome Floating Widget (Zero Emojis)
+  // 3. Smoked Obsidian & Chrome Floating Widget (Synced with Custom Watchlist & Badge Coin)
   let host = null;
   let drawer = null;
   let latestMarket = null;
   let latestFG = null;
   let latestSolNet = null;
   let latestFocus = null;
+  let latestBadgeSym = 'SOL';
   let inlineScanResult = null;
   let inlineScanningCA = '';
   let expanded = false;
@@ -143,18 +144,23 @@
 
     const sorted = [...latestMarket].sort((a, b) => b.pct - a.pct);
     const best = sorted[0];
-    const sol = latestMarket.find((x) => x.sym === 'SOL') || best;
-    const col = sol.pct >= 0 ? '#c8ff78' : '#f87171';
-    const sign = sol.pct >= 0 ? '+' : '';
+    const primary =
+      latestMarket.find((x) => String(x.sym).toUpperCase() === String(latestBadgeSym || 'SOL').toUpperCase()) ||
+      latestMarket.find((x) => x.sym === 'SOL') ||
+      latestMarket[0];
+    const col = primary.pct >= 0 ? '#c8ff78' : '#f87171';
+    const sign = primary.pct >= 0 ? '+' : '';
 
     const rightChunk = focusActive
       ? `<span style="color:#9be8ff;font-weight:600">FOCUS ${fmtCountdown(latestFocus.endsAt)}</span>`
-      : `<span style="color:#94a3b8">${best.sym} ${best.pct >= 0 ? '+' : ''}${best.pct.toFixed(1)}%</span>`;
+      : best && best.sym !== primary.sym
+      ? `<span style="color:#94a3b8">${best.sym} ${best.pct >= 0 ? '+' : ''}${best.pct.toFixed(1)}%</span>`
+      : `<span style="color:#94a3b8">${latestMarket.length} TRACKED</span>`;
 
     pill.innerHTML =
       `<span style="width:6px;height:6px;border-radius:50%;background:${col};box-shadow:0 0 6px ${col};flex:none"></span>` +
       `<b style="color:#e6ecf5;letter-spacing:0.05em">YUZU</b>` +
-      `<span style="color:#cbd5e1">SOL ${fmtPrice(sol.price)} <b style="color:${col}">${sign}${sol.pct.toFixed(1)}%</b></span>` +
+      `<span style="color:#cbd5e1">${primary.sym} ${fmtPrice(primary.price)} <b style="color:${col}">${sign}${primary.pct.toFixed(1)}%</b></span>` +
       `<span style="color:rgba(255,255,255,0.2)">|</span>` +
       rightChunk;
 
@@ -169,13 +175,14 @@
       : '';
 
     const rowsHtml = latestMarket
+      .slice(0, 10)
       .map((m) => {
         const c = m.pct >= 0 ? '#c8ff78' : '#f87171';
         const s = m.pct >= 0 ? '+' : '';
         return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 2px;border-bottom:1px solid rgba(255,255,255,0.06);font-variant-numeric:tabular-nums">
-          <b style="color:#e2e8f0;width:42px">${m.sym}</b>
+          <b style="color:#e2e8f0;width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.sym}</b>
           <span style="flex:1;text-align:right;color:#cbd5e1">${fmtPrice(m.price)}</span>
-          <b style="color:${c};width:54px;text-align:right">${s}${m.pct.toFixed(1)}%</b>
+          <b style="color:${c};width:56px;text-align:right">${s}${m.pct.toFixed(1)}%</b>
         </div>`;
       })
       .join('');
@@ -271,7 +278,7 @@
     drawer = document.createElement('div');
     Object.assign(drawer.style, {
       display: 'none',
-      width: '264px',
+      width: '272px',
       padding: '10px 12px',
       borderRadius: '10px',
       background: 'rgba(6, 8, 12, 0.96)',
@@ -363,11 +370,12 @@
   }, 1000);
 
   try {
-    const st = await chrome.storage.local.get(['widgetEnabled', 'market', 'fearGreed', 'solNetwork', 'focusState']);
+    const st = await chrome.storage.local.get(['widgetEnabled', 'market', 'fearGreed', 'solNetwork', 'focusState', 'badgeSym']);
     latestMarket = st.market || null;
     latestFG = st.fearGreed || null;
     latestSolNet = st.solNetwork || null;
     latestFocus = st.focusState || null;
+    latestBadgeSym = st.badgeSym || 'SOL';
     if (st.widgetEnabled !== false) mountWidget();
 
     if (!Array.isArray(latestMarket) || !latestMarket.length) {
@@ -376,6 +384,7 @@
         if (resp?.market) latestMarket = resp.market;
         if (resp?.fearGreed) latestFG = resp.fearGreed;
         if (resp?.solNetwork) latestSolNet = resp.solNetwork;
+        if (resp?.badgeSym) latestBadgeSym = resp.badgeSym;
         renderWidget();
       });
     }
@@ -385,6 +394,7 @@
       if (changes.fearGreed) latestFG = changes.fearGreed.newValue;
       if (changes.solNetwork) latestSolNet = changes.solNetwork.newValue;
       if (changes.focusState) latestFocus = changes.focusState.newValue;
+      if (changes.badgeSym) latestBadgeSym = changes.badgeSym.newValue || 'SOL';
       if (changes.widgetEnabled) {
         if (changes.widgetEnabled.newValue === false) unmountWidget();
         else mountWidget();

@@ -51,7 +51,7 @@ const stage = new CharacterStage(document.getElementById('stage-fixed'), {
 });
 
 if (isMini) {
-  // Listen to Chrome Extension popup messages for live 3D lip-sync & poses!
+  // Listen to Chrome Extension popup messages for live 3D lip-sync, poses, camera & outfits!
   window.addEventListener('message', (e) => {
     const d = e.data;
     if (!d || typeof d !== 'object') return;
@@ -60,6 +60,10 @@ if (isMini) {
       if (d.speaking && d.pose) stage.react(d.pose);
     } else if (d.type === 'YUZU_POSE' && d.pose) {
       stage.react(d.pose);
+    } else if (d.type === 'YUZU_CAM' && d.cam) {
+      stage.setCameraPreset(d.cam);
+    } else if (d.type === 'YUZU_OUTFIT' && d.outfit) {
+      stage.setOutfitMode(d.outfit);
     }
   });
 } else {

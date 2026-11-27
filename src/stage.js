@@ -31,7 +31,9 @@ const envelope = (p) => smooth(Math.min(p / 0.16, (1 - p) / 0.22, 1));
 export const CAMERA_PRESETS = {
   hero: { pos: [0, 1.12, 3.15], target: [0, 0.88, 0] },
   face: { pos: [0.06, 1.42, 1.38], target: [0, 1.36, 0] },
-  mini: { pos: [0, 1.34, 1.52], target: [0, 1.24, 0] },
+  mini: { pos: [0, 1.37, 1.42], target: [0, 1.33, 0] },
+  miniWaist: { pos: [0, 1.25, 1.96], target: [0, 1.20, 0] },
+  miniFull: { pos: [0, 0.92, 3.52], target: [0, 0.83, 0] },
   outfit: { pos: [-0.42, 0.96, 2.25], target: [0, 0.86, 0] },
   full: { pos: [0.22, 1.08, 3.65], target: [0, 0.84, 0] },
 };
@@ -167,6 +169,14 @@ export class CharacterStage {
     this.patCount = 0;
     this.affection = 15; // 0..100 affection XP -> levels up Bond Level 1..5!
     this.bondLevel = 1;
+    try {
+      const saved = JSON.parse(localStorage.getItem('yuzu_bond_v1') || 'null');
+      if (saved && typeof saved === 'object') {
+        if (Number.isFinite(saved.patCount)) this.patCount = Math.max(0, Math.floor(saved.patCount));
+        if (Number.isFinite(saved.affection)) this.affection = clamp(saved.affection, 0, 100);
+        if (Number.isFinite(saved.bondLevel)) this.bondLevel = clamp(Math.floor(saved.bondLevel), 1, 5);
+      }
+    } catch {}
     this.rubEnergy = 0;
     this.isPointerDown = false;
     this.talkTimer = 0;
@@ -201,8 +211,8 @@ export class CharacterStage {
   }
 
   _initRenderer() {
-    this.renderer = new THREE.WebGLRenderer({ antialias: !this.isMini, alpha: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMini ? 1.25 : 1.5));
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMini ? 2 : 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.container.appendChild(this.renderer.domElement);
     window.addEventListener('resize', () => this._resize());
@@ -213,23 +223,25 @@ export class CharacterStage {
   _resize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMini ? 1.25 : (w < 768 ? 1.25 : 1.5)));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMini ? 2 : (w < 768 ? 1.25 : 1.5)));
     this.renderer.setSize(w, h, false);
     if (this.camera) {
       this.camera.aspect = w / h;
-      // Widen vertical FOV slightly on portrait phones so Yuzu + 3D background fit cleanly
-      this.camera.fov = w / h < 0.78 ? 38 : 28;
+      // Keep crisp 26deg portrait lens in mini extension mode; widen only on tall phone screens on main site
+      this.camera.fov = this.isMini ? 26 : (w / h < 0.78 ? 38 : 28);
       this.camera.updateProjectionMatrix();
     }
   }
 
   _initScene() {
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(28, window.innerWidth / window.innerHeight, 0.1, 50);
-    this.camera.position.set(...CAMERA_PRESETS.hero.pos);
+    this.miniPresetKey = 'mini';
+    const initPreset = this.isMini ? CAMERA_PRESETS.mini : CAMERA_PRESETS.hero;
+    this.camera = new THREE.PerspectiveCamera(this.isMini ? 26 : 28, window.innerWidth / window.innerHeight, 0.1, 50);
+    this.camera.position.set(...initPreset.pos);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(...CAMERA_PRESETS.hero.target);
+    this.controls.target.set(...initPreset.target);
     this.controls.enableZoom = false;
     this.controls.enablePan = false;
     this.controls.enableDamping = true;
@@ -239,9 +251,18 @@ export class CharacterStage {
     this.controls.maxPolarAngle = Math.PI * 0.55;
     this.controls.update();
 
+    if (this.isMini) {
+      this.cameraOverride = {
+        pos: new THREE.Vector3(...initPreset.pos),
+        target: new THREE.Vector3(...initPreset.target),
+      };
+    }
+
     this.controls.addEventListener('start', () => {
       this.userDragging = true;
-      this.cameraOverride = null;
+      if (!this.isMini) {
+        this.cameraOverride = null;
+      }
     });
     this.controls.addEventListener('end', () => {
       this.userDragging = false;
@@ -253,9 +274,9 @@ export class CharacterStage {
     this.scene.environmentIntensity = 0.75;
     pmrem.dispose();
 
-    // Editorial Obsidian & Liquid Mercury Studio Lighting (razor-sharp silver chrome + subtle prismatic cyan/amber rim, zero AI-purple slop!)
-    this.scene.add(new THREE.HemisphereLight(0xeef4ff, 0x05070a, 1.05));
-    const key = new THREE.DirectionalLight(0xffffff, 1.6);
+    // Editorial Obsidian & Liquid Mercury Studio Lighting (balanced for MToon facial detail in mini mode)
+    this.scene.add(new THREE.HemisphereLight(0xeef4ff, 0x05070a, this.isMini ? 0.85 : 1.05));
+    const key = new THREE.DirectionalLight(0xffffff, this.isMini ? 1.15 : 1.6);
     key.position.set(1.2, 3.2, 2.8);
     this.scene.add(key);
     const rimIce = new THREE.DirectionalLight(0x9be8ff, 2.35);
@@ -507,21 +528,23 @@ export class CharacterStage {
     this.heartAura.position.y = 0.004;
     this.scene.add(this.heartAura);
 
-    // 2. Grabbable & Throwable Glossy Pink/Cyan Glass Spheres nestled along the 3D installation!
-    const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(0.18, 4), pinkGlassMat);
-    blob.position.set(1.24, 0.78, -0.75);
-    this.scene.add(blob);
-    this.throwableOrbs.push({ mesh: blob, home: blob.position.clone(), vel: new THREE.Vector3(), state: 'idle', timer: 0, hitCooldown: 0, rx: 0.22, ry: -0.20, phase: 2.1 });
+    // 2. Grabbable & Throwable Glossy Pink/Cyan Glass Spheres nestled along the 3D installation (full stage only)
+    if (!this.isMini) {
+      const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(0.18, 4), pinkGlassMat);
+      blob.position.set(1.24, 0.78, -0.75);
+      this.scene.add(blob);
+      this.throwableOrbs.push({ mesh: blob, home: blob.position.clone(), vel: new THREE.Vector3(), state: 'idle', timer: 0, hitCooldown: 0, rx: 0.22, ry: -0.20, phase: 2.1 });
 
-    const orbLeft = new THREE.Mesh(new THREE.SphereGeometry(0.16, 32, 32), pinkGlassMat);
-    orbLeft.position.set(-1.32, 1.28, -0.82);
-    this.scene.add(orbLeft);
-    this.throwableOrbs.push({ mesh: orbLeft, home: orbLeft.position.clone(), vel: new THREE.Vector3(), state: 'idle', timer: 0, hitCooldown: 0, rx: 0.12, ry: 0.18, phase: 1.1 });
+      const orbLeft = new THREE.Mesh(new THREE.SphereGeometry(0.16, 32, 32), pinkGlassMat);
+      orbLeft.position.set(-1.32, 1.28, -0.82);
+      this.scene.add(orbLeft);
+      this.throwableOrbs.push({ mesh: orbLeft, home: orbLeft.position.clone(), vel: new THREE.Vector3(), state: 'idle', timer: 0, hitCooldown: 0, rx: 0.12, ry: 0.18, phase: 1.1 });
 
-    const orbRight = new THREE.Mesh(new THREE.SphereGeometry(0.15, 32, 32), cyanGlassMat);
-    orbRight.position.set(1.26, 1.52, -0.85);
-    this.scene.add(orbRight);
-    this.throwableOrbs.push({ mesh: orbRight, home: orbRight.position.clone(), vel: new THREE.Vector3(), state: 'idle', timer: 0, hitCooldown: 0, rx: -0.14, ry: 0.20, phase: 3.2 });
+      const orbRight = new THREE.Mesh(new THREE.SphereGeometry(0.15, 32, 32), cyanGlassMat);
+      orbRight.position.set(1.26, 1.52, -0.85);
+      this.scene.add(orbRight);
+      this.throwableOrbs.push({ mesh: orbRight, home: orbRight.position.clone(), vel: new THREE.Vector3(), state: 'idle', timer: 0, hitCooldown: 0, rx: -0.14, ry: 0.20, phase: 3.2 });
+    }
 
     // Clean podium glow
     const glow = new THREE.Mesh(
@@ -768,6 +791,12 @@ export class CharacterStage {
     else this._stopDanceMusic();
 
     if (type === 'headpat') this.patCount++;
+    try {
+      localStorage.setItem(
+        'yuzu_bond_v1',
+        JSON.stringify({ patCount: this.patCount, affection: this.affection, bondLevel: this.bondLevel })
+      );
+    } catch {}
     if (type !== 'pout' && type !== 'bonk') this._burstHearts(origin || new THREE.Vector3(0, 1.38, 0.14));
     const displayText = leveledUp ? `BOND LVL ${this.bondLevel} UNLOCKED ♡` : (customText || def.text);
     this.opts.onReaction?.(type, displayText, this.patCount, this.affection, this.bondLevel);
@@ -1583,12 +1612,17 @@ export class CharacterStage {
       img.onload = () => {
         for (const mat of mats) {
           const orig = mat.userData._origMap || mat.map;
+          if (mat.userData._customTex) {
+            mat.userData._customTex.dispose();
+            mat.userData._customTex = null;
+          }
           const tex = new THREE.Texture(img);
           tex.flipY = orig.flipY;
           tex.colorSpace = orig.colorSpace;
           tex.wrapS = orig.wrapS;
           tex.wrapT = orig.wrapT;
           tex.needsUpdate = true;
+          mat.userData._customTex = tex;
           mat.map = tex;
           if ('shadeMultiplyTexture' in mat && mat.userData._origShade) {
             mat.shadeMultiplyTexture = tex;
@@ -1635,6 +1669,10 @@ export class CharacterStage {
         const orig = mat.userData._origMap;
         if (!orig?.image) continue;
         if (Math.abs(deg) < 1) {
+          if (mat.userData._customTex) {
+            mat.userData._customTex.dispose();
+            mat.userData._customTex = null;
+          }
           mat.map = orig;
           if ('shadeMultiplyTexture' in mat) mat.shadeMultiplyTexture = mat.userData._origShade;
           mat.needsUpdate = true;
@@ -1649,12 +1687,17 @@ export class CharacterStage {
         const ctx = c.getContext('2d');
         ctx.filter = `hue-rotate(${deg}deg) saturate(1.18)`;
         ctx.drawImage(img, 0, 0, w, h);
+        if (mat.userData._customTex) {
+          mat.userData._customTex.dispose();
+          mat.userData._customTex = null;
+        }
         const tex = new THREE.CanvasTexture(c);
         tex.flipY = orig.flipY;
         tex.colorSpace = orig.colorSpace;
         tex.wrapS = orig.wrapS;
         tex.wrapT = orig.wrapT;
         tex.needsUpdate = true;
+        mat.userData._customTex = tex;
         mat.map = tex;
         if ('shadeMultiplyTexture' in mat && mat.userData._origShade) {
           mat.shadeMultiplyTexture = tex;
@@ -2235,8 +2278,8 @@ export class CharacterStage {
       this.fps = Math.round((this.fpsFrames * 1000) / (now - this.fpsLast));
       this.fpsFrames = 0;
       this.fpsLast = now;
-      // Adaptive GPU resolution scaling: if FPS dips under 36 on integrated GPUs, smoothly drop pixelRatio to 1.0
-      if (this.fps < 36 && this.renderer.getPixelRatio() > 1.05) {
+      // Adaptive GPU resolution scaling on full-screen desktop/mobile stage (keep crisp 2x DPR on compact mini stage)
+      if (!this.isMini && this.fps < 36 && this.renderer.getPixelRatio() > 1.05) {
         this._lowFpsStreak = (this._lowFpsStreak || 0) + 1;
         if (this._lowFpsStreak >= 4) {
           this.renderer.setPixelRatio(1);

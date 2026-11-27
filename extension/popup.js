@@ -1,3 +1,7 @@
+// =========================================================================
+// $YUZU TERMINAL v2.5.0 — LARGE 3D STAGE + CUSTOM CRYPTO SEARCH & WATCHLIST
+// =========================================================================
+
 let lastBrief = '';
 let lastPose = 'peace';
 let isSpeaking = false;
@@ -5,22 +9,53 @@ let miniReady = false;
 let currentMarket = [];
 let currentFG = null;
 let currentSolNet = null;
-let currentPinned = [];
+let currentBadgeSym = 'SOL';
+let currentUserBags = {};
 let currentScanToken = null;
-let activePageCtx = null;
+let expandedCoinId = null;
+let marketSort = { key: 'default', dir: 'desc' };
 let selectedFocusMin = 25;
 let selectedFocusMode = 'focus';
-let stageMode = 'strip'; // 'strip' | 'expanded' | 'collapsed'
+let stageVisible = true; // Large 186px 3D stage ON by default!
 
-const BAG_COINS = ['SOL', 'BTC', 'ETH', 'JUP'];
+const CAM_MODES = [
+  { key: 'mini', label: 'CAM: CLOSE' },
+  { key: 'miniWaist', label: 'CAM: WAIST' },
+  { key: 'miniFull', label: 'CAM: FULL' },
+];
+let camModeIdx = 0;
+
+const OUTFIT_MODES = ['full', 'open', 'beach'];
+let outfitModeIdx = 0;
+
+const POPULAR_COINS = [
+  { sym: 'SOL', name: 'Solana', binance: 'SOLUSDT', okx: 'SOL-USDT', cg: 'solana' },
+  { sym: 'BTC', name: 'Bitcoin', binance: 'BTCUSDT', okx: 'BTC-USDT', cg: 'bitcoin' },
+  { sym: 'ETH', name: 'Ethereum', binance: 'ETHUSDT', okx: 'ETH-USDT', cg: 'ethereum' },
+  { sym: 'SUI', name: 'Sui', binance: 'SUIUSDT', okx: 'SUI-USDT', cg: 'sui' },
+  { sym: 'DOGE', name: 'Dogecoin', binance: 'DOGEUSDT', okx: 'DOGE-USDT', cg: 'dogecoin' },
+  { sym: 'XRP', name: 'XRP', binance: 'XRPUSDT', okx: 'XRP-USDT', cg: 'ripple' },
+  { sym: 'HYPE', name: 'Hyperliquid', binance: null, okx: 'HYPE-USDT', cg: 'hyperliquid' },
+  { sym: 'TON', name: 'Toncoin', binance: 'TONUSDT', okx: 'TON-USDT', cg: 'the-open-network' },
+  { sym: 'LINK', name: 'Chainlink', binance: 'LINKUSDT', okx: 'LINK-USDT', cg: 'chainlink' },
+  { sym: 'AVAX', name: 'Avalanche', binance: 'AVAXUSDT', okx: 'AVAX-USDT', cg: 'avalanche-2' },
+  { sym: 'JUP', name: 'Jupiter', binance: 'JUPUSDT', okx: 'JUP-USDT', cg: 'jupiter-exchange-solana' },
+  { sym: 'WIF', name: 'dogwifhat', binance: 'WIFUSDT', okx: 'WIF-USDT', cg: 'dogwifcoin' },
+  { sym: 'BONK', name: 'Bonk', binance: 'BONKUSDT', okx: 'BONK-USDT', cg: 'bonk' },
+  { sym: 'PEPE', name: 'Pepe', binance: 'PEPEUSDT', okx: 'PEPE-USDT', cg: 'pepe' },
+  { sym: 'PENGU', name: 'Pudgy Penguins', binance: 'PENGUUSDT', okx: 'PENGU-USDT', cg: 'pudgy-penguins' },
+  { sym: 'TRUMP', name: 'OFFICIAL TRUMP', binance: 'TRUMPUSDT', okx: 'TRUMP-USDT', cg: 'official-trump' },
+  { sym: 'RENDER', name: 'Render', binance: 'RENDERUSDT', okx: 'RENDER-USDT', cg: 'render-token' },
+];
 
 const yuzuFrame = document.getElementById('yuzu-3d-frame');
 const stageWrap = document.getElementById('mini-3d-wrap');
 const stageCard = document.getElementById('mini-stage-card');
 const speechEl = document.getElementById('yuzu-speech');
+const speechCompactEl = document.getElementById('yuzu-speech-compact');
 
 function checkSidePanelMode() {
-  if (window.innerHeight > 605 || window.innerWidth > 420) {
+  if (window.innerHeight > 605 || window.innerWidth > 440) {
     document.body.classList.add('sidepanel-mode');
   }
 }
@@ -85,8 +120,9 @@ function shortCA(a) {
 
 function setYuzuLine(text, pose = null) {
   const clean = stripEmojis(text);
-  if (clean && speechEl) {
-    speechEl.textContent = clean;
+  if (clean) {
+    if (speechEl) speechEl.textContent = clean;
+    if (speechCompactEl) speechCompactEl.textContent = clean;
     lastBrief = clean;
   }
   if (pose) {
@@ -96,28 +132,68 @@ function setYuzuLine(text, pose = null) {
 }
 
 // =========================================================================
-// MINI 3D STAGE BRIDGE, SIDE PANEL & KEYBOARD SHORTCUTS
+// LARGE INTERACTIVE 3D STAGE BRIDGE & CONTROLS
 // =========================================================================
 function notify3D(payload) {
   if (!miniReady) return;
   try {
     yuzuFrame?.contentWindow?.postMessage(payload, '*');
-  } catch {}
+  } catch { }
 }
 
 window.addEventListener('message', (e) => {
   if (e.data?.type === 'YUZU_MINI_READY') {
     miniReady = true;
     stageWrap?.classList.add('ready');
+    notify3D({ type: 'YUZU_CAM', cam: CAM_MODES[camModeIdx].key });
     notify3D({ type: 'YUZU_POSE', pose: lastPose });
   }
 });
 
-setTimeout(() => {
-  if (yuzuFrame && !yuzuFrame.getAttribute('src')) {
+function boot3DFrameIfNeeded() {
+  if (stageVisible && yuzuFrame && !yuzuFrame.getAttribute('src')) {
     yuzuFrame.src = 'https://yuzuha-simulator.vercel.app/?mini=1';
   }
-}, 60);
+}
+
+const btnToggle3D = document.getElementById('btn-toggle-3d');
+function applyStageVisibility(visible) {
+  stageVisible = visible !== false;
+  stageCard?.classList.toggle('compact', !stageVisible);
+  if (btnToggle3D) {
+    btnToggle3D.textContent = stageVisible ? '3D ON' : '3D OFF';
+    btnToggle3D.classList.toggle('active', stageVisible);
+  }
+  if (stageVisible) boot3DFrameIfNeeded();
+}
+
+btnToggle3D?.addEventListener('click', () => {
+  applyStageVisibility(!stageVisible);
+  chrome.storage.local.set({ yuzuStageSizeV2: stageVisible ? 'large' : 'compact' });
+});
+
+document.querySelectorAll('.stage-chip[data-pose]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const pose = btn.getAttribute('data-pose');
+    if (pose) notify3D({ type: 'YUZU_POSE', pose });
+  });
+});
+
+const btnStageCam = document.getElementById('btn-stage-cam');
+btnStageCam?.addEventListener('click', () => {
+  camModeIdx = (camModeIdx + 1) % CAM_MODES.length;
+  const m = CAM_MODES[camModeIdx];
+  btnStageCam.textContent = m.label;
+  notify3D({ type: 'YUZU_CAM', cam: m.key });
+  chrome.storage.local.set({ yuzuMiniCam: m.key });
+});
+
+document.getElementById('btn-stage-outfit')?.addEventListener('click', () => {
+  outfitModeIdx = (outfitModeIdx + 1) % OUTFIT_MODES.length;
+  const outfit = OUTFIT_MODES[outfitModeIdx];
+  notify3D({ type: 'YUZU_OUTFIT', outfit });
+  notify3D({ type: 'YUZU_POSE', pose: 'peace' });
+});
 
 document.getElementById('btn-open-sidepanel')?.addEventListener('click', async () => {
   try {
@@ -126,26 +202,7 @@ document.getElementById('btn-open-sidepanel')?.addEventListener('click', async (
       await chrome.sidePanel.open({ windowId: win.id });
       window.close();
     }
-  } catch {}
-});
-
-const btnToggle3D = document.getElementById('btn-toggle-3d');
-function applyStageMode(mode) {
-  const valid = mode === 'expanded' || mode === 'collapsed' ? mode : 'strip';
-  stageMode = valid;
-  stageCard?.classList.remove('expanded', 'collapsed');
-  if (valid === 'expanded') stageCard?.classList.add('expanded');
-  if (valid === 'collapsed') stageCard?.classList.add('collapsed');
-  if (btnToggle3D) {
-    btnToggle3D.textContent = valid === 'collapsed' ? '3D OFF' : '3D';
-    btnToggle3D.classList.toggle('active', valid === 'expanded');
-  }
-}
-
-btnToggle3D?.addEventListener('click', () => {
-  const next = stageMode === 'strip' ? 'expanded' : stageMode === 'expanded' ? 'collapsed' : 'strip';
-  applyStageMode(next);
-  chrome.storage.local.set({ stageMode: next });
+  } catch { }
 });
 
 function switchTab(tabName) {
@@ -164,8 +221,8 @@ window.addEventListener('keydown', (e) => {
   const inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
   if (e.key === '/' && !inField) {
     e.preventDefault();
-    switchTab('scan');
-    document.getElementById('scan-input')?.focus();
+    switchTab('pulse');
+    document.getElementById('market-search-input')?.focus();
   } else if (e.altKey && ['1', '2', '3', '4'].includes(e.key)) {
     e.preventDefault();
     const map = { '1': 'pulse', '2': 'scan', '3': 'focus', '4': 'tools' };
@@ -195,9 +252,12 @@ function pickCleanEnglishVoice() {
 }
 
 const btnSpeak = document.getElementById('btn-speak');
+const btnSpeakCompact = document.getElementById('btn-speak-compact');
+
 function setSpeakingUI(on) {
   isSpeaking = on;
   if (btnSpeak) btnSpeak.textContent = on ? 'STOP' : 'SPEAK';
+  if (btnSpeakCompact) btnSpeakCompact.textContent = on ? 'STOP' : 'SPEAK';
   stageWrap?.classList.toggle('speaking', on);
   notify3D({ type: 'YUZU_SPEAK', speaking: on, pose: lastPose });
 }
@@ -226,14 +286,207 @@ function speakText(text) {
 }
 
 btnSpeak?.addEventListener('click', () => speakText(lastBrief));
+btnSpeakCompact?.addEventListener('click', () => speakText(lastBrief));
 window.addEventListener('pagehide', () => {
   try {
     window.speechSynthesis?.cancel();
-  } catch {}
+  } catch { }
 });
 
 // =========================================================================
-// TAB 1: MARKET (KPI STRIP + PORTFOLIO + TABLE + WATCHLIST + ALERTS)
+// UNIVERSAL CRYPTO SEARCH & POPULAR DRAWER (TAB 1)
+// =========================================================================
+const mSearchInput = document.getElementById('market-search-input');
+const mSearchClear = document.getElementById('btn-clear-msearch');
+const mSearchResults = document.getElementById('market-search-results');
+const popularDrawer = document.getElementById('popular-drawer');
+const btnTogglePopular = document.getElementById('btn-toggle-popular');
+let searchDebounce = null;
+let lastSearchQuery = '';
+let cachedSearchItems = [];
+
+function isCoinTracked(candidate) {
+  return currentMarket.some(
+    (m) =>
+      m.id?.toLowerCase() === String(candidate.id || '').toLowerCase() ||
+      (candidate.kind !== 'dex' && m.kind !== 'dex' && m.sym.toUpperCase() === String(candidate.sym).toUpperCase())
+  );
+}
+
+function renderPopularChips() {
+  const wrap = document.getElementById('popular-chips');
+  if (!wrap) return;
+  wrap.innerHTML = POPULAR_COINS.map((c) => {
+    const tracked = currentMarket.some((m) => m.kind !== 'dex' && m.sym === c.sym);
+    return `<button class="chip ${tracked ? 'tracked' : ''}" data-pop-sym="${esc(c.sym)}">
+      <b>${esc(c.sym)}</b> ${tracked ? 'TRACKING' : '+'}
+    </button>`;
+  }).join('');
+
+  wrap.querySelectorAll('button[data-pop-sym]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const sym = btn.getAttribute('data-pop-sym');
+      const meta = POPULAR_COINS.find((c) => c.sym === sym);
+      if (!meta) return;
+      const existing = currentMarket.find((m) => m.kind !== 'dex' && m.sym === sym);
+      if (existing) {
+        mutateWatchlist({ action: 'remove', id: existing.id }, `Removed ${sym} from watchlist.`);
+      } else {
+        mutateWatchlist({ action: 'add', coin: { ...meta, id: `cex:${meta.sym}`, kind: 'cex' } }, `Now tracking ${sym} in Market.`);
+      }
+    });
+  });
+}
+
+btnTogglePopular?.addEventListener('click', () => {
+  if (!popularDrawer) return;
+  const nextOpen = popularDrawer.style.display === 'none';
+  popularDrawer.style.display = nextOpen ? 'flex' : 'none';
+  btnTogglePopular.classList.toggle('active', nextOpen);
+  if (nextOpen) renderPopularChips();
+});
+
+document.getElementById('btn-reset-watchlist')?.addEventListener('click', () => {
+  mutateWatchlist({ action: 'reset' }, 'Watchlist restored to default coins.');
+});
+
+function renderSearchResults(items, query) {
+  if (!mSearchResults) return;
+  cachedSearchItems = items || [];
+  if (!query) {
+    mSearchResults.style.display = 'none';
+    return;
+  }
+  mSearchResults.style.display = 'flex';
+  if (!items || !items.length) {
+    mSearchResults.innerHTML = `<span class="hint-line">No coins or active pools matched "${esc(query)}".</span>`;
+    return;
+  }
+
+  mSearchResults.innerHTML = items
+    .map((it, idx) => {
+      const tracked = isCoinTracked(it);
+      const sign = it.pct >= 0 ? '+' : '';
+      const pctCol = it.pct >= 0 ? '#c8ff78' : '#f87171';
+      const subMetric = it.liqUsd > 0 ? `Liq ${fmtCompactUsd(it.liqUsd)}` : it.volUsd > 0 ? `Vol ${fmtCompactUsd(it.volUsd)}` : it.name;
+      return `<div class="sres-row">
+        <div class="sres-meta">
+          <div class="sres-title">
+            <span>${esc(it.sym)}</span>
+            <span class="src-badge">${esc(it.sourceTag || 'SPOT')}</span>
+          </div>
+          <span class="sres-sub">${esc(it.name)} · ${subMetric}</span>
+        </div>
+        <div class="sres-quote">
+          <div style="color:#ffffff;font-weight:600">${fmtPrice(it.price)}</div>
+          <div style="color:${pctCol}">${sign}${Number(it.pct || 0).toFixed(1)}%</div>
+        </div>
+        <div class="sres-actions">
+          <button class="track-btn ${tracked ? 'added' : ''}" data-track-idx="${idx}">${tracked ? 'ADDED' : '+ TRACK'}</button>
+          ${it.kind === 'dex' ? `<button class="inline-btn" data-scan-idx="${idx}" title="Audit contract">SCAN</button>` : ''}
+        </div>
+      </div>`;
+    })
+    .join('');
+
+  mSearchResults.querySelectorAll('button[data-track-idx]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-track-idx') || '0', 10);
+      const coin = cachedSearchItems[idx];
+      if (!coin) return;
+      if (isCoinTracked(coin)) {
+        const match = currentMarket.find(
+          (m) => m.id?.toLowerCase() === coin.id.toLowerCase() || (coin.kind !== 'dex' && m.kind !== 'dex' && m.sym === coin.sym)
+        );
+        if (match) mutateWatchlist({ action: 'remove', id: match.id }, `Removed ${coin.sym} from watchlist.`);
+      } else {
+        mutateWatchlist({ action: 'add', coin }, `Added ${coin.sym} to your live watchlist.`);
+      }
+    });
+  });
+
+  mSearchResults.querySelectorAll('button[data-scan-idx]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-scan-idx') || '0', 10);
+      const coin = cachedSearchItems[idx];
+      if (!coin) return;
+      switchTab('scan');
+      triggerTokenScan(coin.address || coin.sym);
+    });
+  });
+}
+
+function runMarketSearch(raw) {
+  const q = String(raw ?? mSearchInput?.value ?? '').trim();
+  lastSearchQuery = q;
+  if (mSearchClear) mSearchClear.style.display = q ? 'block' : 'none';
+  if (!q) {
+    if (mSearchResults) mSearchResults.style.display = 'none';
+    renderWatchlistRows();
+    return;
+  }
+
+  // Also filter existing table live if short query, while querying global crypto API
+  renderWatchlistRows();
+
+  if (mSearchResults) {
+    mSearchResults.style.display = 'flex';
+    mSearchResults.innerHTML = `<span class="hint-line">Searching global spot &amp; DEX feeds for "${esc(q)}"...</span>`;
+  }
+
+  chrome.runtime.sendMessage({ type: 'SEARCH_CRYPTO', query: q }, (res) => {
+    if (lastSearchQuery !== q) return;
+    if (chrome.runtime.lastError || !res?.ok) {
+      if (mSearchResults) mSearchResults.innerHTML = `<span class="hint-line">Search temporarily unavailable.</span>`;
+      return;
+    }
+    renderSearchResults(res.results || [], q);
+  });
+}
+
+mSearchInput?.addEventListener('input', () => {
+  clearTimeout(searchDebounce);
+  const val = mSearchInput.value.trim();
+  if (!val) {
+    runMarketSearch('');
+    return;
+  }
+  searchDebounce = setTimeout(() => runMarketSearch(val), 260);
+});
+
+mSearchInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    clearTimeout(searchDebounce);
+    runMarketSearch(mSearchInput.value.trim());
+  } else if (e.key === 'Escape') {
+    if (mSearchInput) mSearchInput.value = '';
+    runMarketSearch('');
+  }
+});
+
+mSearchClear?.addEventListener('click', () => {
+  if (mSearchInput) mSearchInput.value = '';
+  runMarketSearch('');
+  mSearchInput?.focus();
+});
+
+function mutateWatchlist(payload, speechMsg = '') {
+  chrome.runtime.sendMessage({ type: 'WATCHLIST_MUTATE', ...payload }, (resp) => {
+    if (chrome.runtime.lastError) return;
+    if (resp?.badgeSym) currentBadgeSym = resp.badgeSym;
+    if (resp?.market?.length) {
+      renderPulse(resp.market, resp.source, resp.updatedAt, resp.fearGreed, resp.solNetwork, resp.badgeSym);
+    }
+    if (popularDrawer?.style.display !== 'none') renderPopularChips();
+    if (lastSearchQuery && cachedSearchItems.length) {
+      renderSearchResults(cachedSearchItems, lastSearchQuery);
+    }
+    if (speechMsg) setYuzuLine(speechMsg, 'peace');
+  });
+}
+
+// =========================================================================
+// TAB 1: MARKET KPIs, PORTFOLIO, INTERACTIVE WATCHLIST & ALERTS
 // =========================================================================
 function renderFGSparkline(history) {
   const svg = document.getElementById('fg-sparkline');
@@ -257,23 +510,233 @@ function buildBrief(market, fg, solNet) {
   const sorted = [...market].sort((a, b) => b.pct - a.pct);
   const best = sorted[0];
   const worst = sorted[sorted.length - 1];
-  const sol = market.find((m) => m.sym === 'SOL');
-  const fgPart = fg ? `Sentiment ${fg.value} (${fg.label}). ` : '';
-  const tpsPart = solNet?.tps ? `Solana ${solNet.tps.toLocaleString()} TPS.` : '';
+  const primary =
+    market.find((m) => m.sym.toUpperCase() === String(currentBadgeSym || 'SOL').toUpperCase()) ||
+    market.find((m) => m.sym === 'SOL') ||
+    best;
+  const fgPart = fg ? `F&G ${fg.value} (${fg.label}). ` : '';
+  const tpsPart = solNet?.tps ? `${solNet.tps.toLocaleString()} TPS.` : '';
   const leadText =
-    best.pct >= 0
-      ? `${best.sym} leads +${best.pct.toFixed(1)}%`
-      : `${best.sym} holds best (${best.pct.toFixed(1)}%)`;
+    best.pct >= 0 ? `${best.sym} +${best.pct.toFixed(1)}%` : `${best.sym} ${best.pct.toFixed(1)}%`;
   lastPose = best.pct > 2.5 ? 'dance' : worst.pct < -4 ? 'pout' : 'peace';
-  return `${fgPart}${leadText}, ${worst.sym} ${worst.pct.toFixed(1)}%. SOL ${sol ? fmtPrice(sol.price) : '—'}. ${tpsPart}`.trim();
+  return `${fgPart}${leadText}, ${worst.sym} ${worst.pct.toFixed(1)}%. ${primary.sym} ${fmtPrice(primary.price)}. ${tpsPart}`.trim();
 }
 
-function renderPulse(market, source = '', updatedAt = 0, fg = null, solNet = null, pinned = null) {
+function syncCoinDropdowns() {
+  const alertSel = document.getElementById('alert-sym');
+  const convSel = document.getElementById('conv-sym');
+  if (!currentMarket.length) return;
+
+  const prevAlert = alertSel?.value;
+  const prevConv = convSel?.value;
+
+  const optsHtml = currentMarket
+    .map((m) => `<option value="${esc(m.sym)}">${esc(m.sym)}</option>`)
+    .join('');
+
+  if (alertSel) {
+    alertSel.innerHTML = optsHtml;
+    if (prevAlert && currentMarket.some((m) => m.sym === prevAlert)) alertSel.value = prevAlert;
+  }
+  if (convSel) {
+    convSel.innerHTML = optsHtml;
+    if (prevConv && currentMarket.some((m) => m.sym === prevConv)) {
+      convSel.value = prevConv;
+    } else if (currentMarket.some((m) => m.sym === 'SOL')) {
+      convSel.value = 'SOL';
+    }
+    syncConverterRate();
+  }
+}
+
+function renderWatchlistRows() {
+  const list = document.getElementById('coin-list');
+  const countLbl = document.getElementById('watchlist-count-lbl');
+  if (!list) return;
+
+  let rows = [...currentMarket];
+  if (marketSort.key === 'pct') {
+    rows.sort((a, b) => (marketSort.dir === 'desc' ? b.pct - a.pct : a.pct - b.pct));
+  } else if (marketSort.key === 'price') {
+    rows.sort((a, b) => (marketSort.dir === 'desc' ? b.price - a.price : a.price - b.price));
+  }
+
+  if (countLbl) countLbl.textContent = `WATCHLIST (${currentMarket.length})`;
+
+  list.innerHTML = rows
+    .map((m) => {
+      const id = m.id || `cex:${m.sym}`;
+      const isOpen = expandedCoinId === id;
+      const isBadge = String(m.sym).toUpperCase() === String(currentBadgeSym || 'SOL').toUpperCase();
+      const cls = m.pct >= 0 ? 'up' : 'down';
+      const sign = m.pct >= 0 ? '+' : '';
+      const span = (m.high24h || 0) - (m.low24h || 0);
+      const posPct = span > 0 ? Math.min(95, Math.max(5, ((m.price - m.low24h) / span) * 100)) : 50;
+
+      const bagQty = Number(currentUserBags[m.sym]) || 0;
+      const bagUsd = bagQty * m.price;
+      const subText =
+        bagQty > 0
+          ? `${bagQty} = ${fmtPrice(bagUsd)}`
+          : m.liqUsd > 0
+          ? `Liq ${fmtCompactUsd(m.liqUsd)}`
+          : m.volUsd > 0
+          ? `Vol ${fmtCompactUsd(m.volUsd)}`
+          : m.name || 'Spot';
+
+      return `<div class="coin-item-wrap ${isOpen ? 'open' : ''}" data-coin-id="${esc(id)}">
+        <div class="row" data-toggle-row="${esc(id)}">
+          <div class="asset-cell">
+            <div class="sym-line">
+              <span class="row-sym">${esc(m.sym)}</span>
+              ${m.pinnedTop ? '<span class="mini-tag top">TOP</span>' : ''}
+              ${isBadge ? '<span class="mini-tag icon">ICON</span>' : ''}
+              ${m.kind === 'dex' ? '<span class="mini-tag dex">DEX</span>' : ''}
+            </div>
+            <span class="vol-sub ${bagQty > 0 ? 'bag-sub' : ''}">${esc(subText)}</span>
+          </div>
+          <div class="range-track" title="24h Low ${fmtPrice(m.low24h)} — High ${fmtPrice(m.high24h)}">
+            <span class="range-thumb" style="left:${posPct.toFixed(0)}%"></span>
+          </div>
+          <span class="price-cell">${fmtPrice(m.price)}</span>
+          <span class="pct-pill ${cls}">${sign}${m.pct.toFixed(2)}%</span>
+          <button class="row-del-btn" data-del-coin="${esc(id)}" data-del-sym="${esc(m.sym)}" title="Remove ${esc(m.sym)}">×</button>
+        </div>
+
+        <div class="row-drawer">
+          <div class="drawer-top">
+            <div class="drawer-bag-group">
+              <span class="label">HOLDINGS</span>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                placeholder="0.00"
+                value="${bagQty > 0 ? bagQty : ''}"
+                data-inline-bag="${esc(m.sym)}"
+                class="field drawer-bag-inp"
+              />
+              <span class="muted-mono" data-inline-bag-val="${esc(m.sym)}">${bagQty > 0 ? fmtPrice(bagUsd) : '$0.00'}</span>
+            </div>
+            <span class="muted-mono">L ${fmtPrice(m.low24h)} · H ${fmtPrice(m.high24h)}</span>
+          </div>
+          <div class="drawer-actions">
+            <button class="d-btn ${m.pinnedTop ? 'active' : ''}" data-top-coin="${esc(id)}">${m.pinnedTop ? 'PINNED TOP' : 'PIN TOP'}</button>
+            <button class="d-btn ${isBadge ? 'active' : ''}" data-badge-sym="${esc(m.sym)}" title="Show this coin on Chrome icon &amp; page overlay">${isBadge ? 'ON ICON' : 'SET ICON'}</button>
+            <button class="d-btn" data-quick-alert="${esc(m.sym)}" data-qdir="above" data-qprice="${m.price}">+5% ALERT</button>
+            <button class="d-btn" data-quick-alert="${esc(m.sym)}" data-qdir="below" data-qprice="${m.price}">-5% ALERT</button>
+            <a class="d-btn" href="${esc(m.chartUrl)}" target="_blank" rel="noopener">CHART</a>
+            ${m.kind === 'dex' && m.address ? `<button class="d-btn" data-open-scan="${esc(m.address)}">AUDIT</button>` : ''}
+          </div>
+        </div>
+      </div>`;
+    })
+    .join('');
+
+  // Row expand/collapse
+  list.querySelectorAll('[data-toggle-row]').forEach((rowEl) => {
+    rowEl.addEventListener('click', (e) => {
+      if (e.target.closest('button[data-del-coin]')) return;
+      const id = rowEl.getAttribute('data-toggle-row');
+      expandedCoinId = expandedCoinId === id ? null : id;
+      renderWatchlistRows();
+    });
+  });
+
+  // Remove coin
+  list.querySelectorAll('button[data-del-coin]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute('data-del-coin');
+      const sym = btn.getAttribute('data-del-sym');
+      if (expandedCoinId === id) expandedCoinId = null;
+      mutateWatchlist({ action: 'remove', id }, `Removed ${sym} from watchlist.`);
+    });
+  });
+
+  // Inline Holdings input
+  list.querySelectorAll('input[data-inline-bag]').forEach((inp) => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('input', async () => {
+      const sym = inp.getAttribute('data-inline-bag');
+      const v = parseFloat(inp.value || '0');
+      if (v > 0) currentUserBags[sym] = v;
+      else delete currentUserBags[sym];
+      await chrome.storage.local.set({ userBags: currentUserBags });
+      const coin = currentMarket.find((x) => x.sym === sym);
+      const valSpan = list.querySelector(`[data-inline-bag-val="${CSS.escape(sym)}"]`);
+      if (valSpan && coin) valSpan.textContent = v > 0 ? fmtPrice(v * coin.price) : '$0.00';
+      renderPortfolioValue();
+      initPortfolioEditor();
+    });
+  });
+
+  // Pin to Top
+  list.querySelectorAll('button[data-top-coin]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      mutateWatchlist({ action: 'toggleTop', id: btn.getAttribute('data-top-coin') });
+    });
+  });
+
+  // Set as Chrome Toolbar Icon & Overlay Badge coin
+  list.querySelectorAll('button[data-badge-sym]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const sym = btn.getAttribute('data-badge-sym');
+      currentBadgeSym = sym;
+      mutateWatchlist({ action: 'setBadge', sym }, `${sym} is now pinned to your Chrome icon & page overlay.`);
+      renderWatchlistRows();
+    });
+  });
+
+  // 1-Click +5% / -5% Alert
+  list.querySelectorAll('button[data-quick-alert]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const sym = btn.getAttribute('data-quick-alert');
+      const cond = btn.getAttribute('data-qdir') || 'above';
+      const baseP = parseFloat(btn.getAttribute('data-qprice') || '0');
+      if (!(baseP > 0)) return;
+      const rawTarget = cond === 'above' ? baseP * 1.05 : baseP * 0.95;
+      const target = Number(rawTarget >= 100 ? Math.round(rawTarget) : rawTarget >= 1 ? rawTarget.toFixed(2) : rawTarget.toPrecision(3));
+      const { priceAlerts = [] } = await chrome.storage.local.get('priceAlerts');
+      const next = [
+        { id: `${Date.now().toString(36)}`, sym, condition: cond, target, triggered: false, createdAt: Date.now() },
+        ...priceAlerts,
+      ].slice(0, 10);
+      await chrome.storage.local.set({ priceAlerts: next });
+      renderPriceAlerts();
+      setYuzuLine(`Alert set: ${sym} ${cond === 'above' ? '>=' : '<='} $${target}.`, 'peace');
+    });
+  });
+
+  // Audit DEX coin in Scanner
+  list.querySelectorAll('button[data-open-scan]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      switchTab('scan');
+      triggerTokenScan(btn.getAttribute('data-open-scan'));
+    });
+  });
+}
+
+// Column header sorting
+document.querySelectorAll('.th-sort').forEach((th) => {
+  th.addEventListener('click', () => {
+    const key = th.getAttribute('data-sort') || 'default';
+    if (marketSort.key === key && key !== 'default') {
+      marketSort.dir = marketSort.dir === 'desc' ? 'asc' : 'desc';
+    } else {
+      marketSort = { key, dir: 'desc' };
+    }
+    document.querySelectorAll('.th-sort').forEach((b) => b.classList.toggle('active', b === th));
+    renderWatchlistRows();
+  });
+});
+
+function renderPulse(market, source = '', updatedAt = 0, fg = null, solNet = null, badgeSym = null) {
   if (!Array.isArray(market) || !market.length) return;
   currentMarket = market;
   if (fg) currentFG = fg;
   if (solNet) currentSolNet = solNet;
-  if (Array.isArray(pinned)) currentPinned = pinned;
+  if (badgeSym) currentBadgeSym = badgeSym;
 
   const upCount = market.filter((m) => m.pct >= 0).length;
   const downCount = market.length - upCount;
@@ -285,7 +748,7 @@ function renderPulse(market, source = '', updatedAt = 0, fg = null, solNet = nul
   const tpsStatusEl = document.getElementById('sol-net-status');
 
   if (breadthEl) breadthEl.textContent = `${upCount} UP / ${downCount} DN`;
-  if (volEl) volEl.textContent = totalVol > 0 ? `Vol ${fmtCompactUsd(totalVol)}` : '24h Spot';
+  if (volEl) volEl.textContent = totalVol > 0 ? `Vol ${fmtCompactUsd(totalVol)}` : '24h Live';
   if (tpsEl && currentSolNet?.tps) {
     tpsEl.textContent = `${currentSolNet.tps.toLocaleString()} TPS`;
   }
@@ -318,92 +781,57 @@ function renderPulse(market, source = '', updatedAt = 0, fg = null, solNet = nul
     setYuzuLine(buildBrief(market, currentFG, currentSolNet), lastPose);
   }
 
-  const list = document.getElementById('coin-list');
-  list.innerHTML = market
-    .map((m) => {
-      const cls = m.pct >= 0 ? 'up' : 'down';
-      const sign = m.pct >= 0 ? '+' : '';
-      const chartUrl = `https://www.tradingview.com/symbols/${m.sym}USDT/`;
-      const span = (m.high24h || 0) - (m.low24h || 0);
-      const posPct = span > 0 ? Math.min(95, Math.max(5, ((m.price - m.low24h) / span) * 100)) : 50;
-      const volTxt = m.volUsd > 0 ? fmtCompactUsd(m.volUsd) : '24h';
-      return `<div class="row">
-        <div class="asset-cell">
-          <a class="row-link" href="${chartUrl}" target="_blank" rel="noopener" title="Open ${esc(m.sym)} chart">${esc(m.sym)}</a>
-          <span class="vol-sub">${volTxt}</span>
-        </div>
-        <div class="range-track" title="Low ${fmtPrice(m.low24h)} — High ${fmtPrice(m.high24h)}">
-          <span class="range-thumb" style="left:${posPct.toFixed(0)}%"></span>
-        </div>
-        <span class="price-cell">${fmtPrice(m.price)}</span>
-        <span class="pct-pill ${cls}">${sign}${m.pct.toFixed(2)}%</span>
-        <button class="row-act-btn" data-pick-alert="${esc(m.sym)}" data-pick-price="${m.price}" title="Set price alert">+</button>
-      </div>`;
-    })
-    .join('');
-
-  list.querySelectorAll('button[data-pick-alert]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const sym = btn.getAttribute('data-pick-alert');
-      const pr = parseFloat(btn.getAttribute('data-pick-price') || '0');
-      const symSel = document.getElementById('alert-sym');
-      const targetInp = document.getElementById('alert-target');
-      if (symSel) symSel.value = sym;
-      if (targetInp && pr > 0) {
-        const suggested = pr * 1.05;
-        targetInp.value = suggested >= 100 ? Math.round(suggested) : suggested >= 1 ? suggested.toFixed(2) : suggested.toPrecision(3);
-        targetInp.focus();
-      }
-    });
-  });
-
+  syncCoinDropdowns();
+  renderWatchlistRows();
+  initPortfolioEditor();
   renderPortfolioValue();
-  renderPinnedWatchlist();
-
-  const sol = market.find((m) => m.sym === 'SOL');
-  if (sol?.price) syncSolConverter(sol.price);
 }
 
-// Portfolio Estimator
+// Portfolio Estimator (Supports ALL coins in Watchlist)
 async function initPortfolioEditor() {
   const { userBags = {} } = await chrome.storage.local.get('userBags');
+  currentUserBags = userBags;
   const grid = document.getElementById('bag-inputs-grid');
-  if (grid) {
-    grid.innerHTML = BAG_COINS.map(
-      (sym) => `<div class="calc-field">
-        <label>${sym}</label>
-        <input type="number" step="any" min="0" placeholder="0" data-bag-sym="${sym}" value="${userBags[sym] || ''}" class="field" />
-      </div>`
-    ).join('');
+  if (!grid) return;
 
-    grid.querySelectorAll('input[data-bag-sym]').forEach((inp) => {
-      inp.addEventListener('input', async () => {
-        const st = await chrome.storage.local.get('userBags');
-        const next = { ...(st.userBags || {}) };
-        const s = inp.getAttribute('data-bag-sym');
-        const v = parseFloat(inp.value || '0');
-        if (v > 0) next[s] = v;
-        else delete next[s];
-        await chrome.storage.local.set({ userBags: next });
-        renderPortfolioValue();
-      });
+  const coins = currentMarket.length ? currentMarket.map((m) => m.sym) : ['SOL', 'BTC', 'ETH', 'SUI', 'JUP', 'WIF'];
+  const uniqueSyms = [...new Set(coins)].slice(0, 12);
+
+  grid.innerHTML = uniqueSyms
+    .map(
+      (sym) => `<div class="calc-field">
+        <label>${esc(sym)}</label>
+        <input type="number" step="any" min="0" placeholder="0" data-bag-sym="${esc(sym)}" value="${currentUserBags[sym] || ''}" class="field" />
+      </div>`
+    )
+    .join('');
+
+  grid.querySelectorAll('input[data-bag-sym]').forEach((inp) => {
+    inp.addEventListener('input', async () => {
+      const s = inp.getAttribute('data-bag-sym');
+      const v = parseFloat(inp.value || '0');
+      if (v > 0) currentUserBags[s] = v;
+      else delete currentUserBags[s];
+      await chrome.storage.local.set({ userBags: currentUserBags });
+      renderPortfolioValue();
+      renderWatchlistRows();
     });
-  }
-  renderPortfolioValue();
+  });
 }
 
 async function renderPortfolioValue() {
   const { userBags = {} } = await chrome.storage.local.get('userBags');
+  currentUserBags = userBags;
   const totalEl = document.getElementById('bag-total-val');
   const pnlEl = document.getElementById('bag-24h-pnl');
   if (!totalEl || !pnlEl) return;
 
   let totalNow = 0;
   let totalPrev = 0;
-  for (const sym of BAG_COINS) {
-    const qty = Number(userBags[sym]) || 0;
+  for (const [sym, qtyRaw] of Object.entries(userBags)) {
+    const qty = Number(qtyRaw) || 0;
     if (qty <= 0) continue;
-    const c = currentMarket.find((m) => m.sym === sym);
+    const c = currentMarket.find((m) => m.sym.toUpperCase() === sym.toUpperCase());
     if (!c) continue;
     const val = qty * c.price;
     const prev = val / (1 + (c.pct || 0) / 100);
@@ -413,7 +841,7 @@ async function renderPortfolioValue() {
 
   totalEl.textContent = `$${totalNow.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (totalNow <= 0) {
-    pnlEl.textContent = 'No holdings set';
+    pnlEl.textContent = 'Click any coin or BAGS to set qty';
     pnlEl.style.color = '#7c899e';
   } else {
     const diff = totalNow - totalPrev;
@@ -429,60 +857,8 @@ document.getElementById('btn-edit-bags')?.addEventListener('click', (e) => {
   if (!ed) return;
   const open = ed.style.display === 'none';
   ed.style.display = open ? 'flex' : 'none';
-  e.currentTarget.textContent = open ? 'CLOSE' : 'EDIT';
+  e.currentTarget.textContent = open ? 'CLOSE' : 'BAGS';
 });
-
-// Pinned On-Chain Watchlist
-async function renderPinnedWatchlist() {
-  const { pinnedTokens = [] } = await chrome.storage.local.get('pinnedTokens');
-  currentPinned = pinnedTokens;
-  const box = document.getElementById('pinned-watchlist-box');
-  const list = document.getElementById('pinned-list');
-  const cnt = document.getElementById('pinned-count-lbl');
-  if (!box || !list) return;
-
-  if (!pinnedTokens.length) {
-    box.style.display = 'none';
-    return;
-  }
-  box.style.display = 'flex';
-  if (cnt) cnt.textContent = `${pinnedTokens.length} ${pinnedTokens.length === 1 ? 'token' : 'tokens'}`;
-
-  list.innerHTML = pinnedTokens
-    .map((t) => {
-      const pct = Number(t.pct24h || 0);
-      const cls = pct >= 0 ? 'up' : 'down';
-      const sign = pct >= 0 ? '+' : '';
-      return `<div class="row">
-        <div class="asset-cell">
-          <button class="row-link" data-open-scan="${esc(t.address)}" title="Inspect ${esc(t.symbol)}">${esc(t.symbol)}</button>
-          <span class="vol-sub">Liq ${fmtCompactUsd(t.liquidityUsd || 0)}</span>
-        </div>
-        <span class="vol-sub">${esc(shortCA(t.address))}</span>
-        <span class="price-cell">${fmtPrice(t.priceUsd)}</span>
-        <span class="pct-pill ${cls}">${sign}${pct.toFixed(1)}%</span>
-        <button class="row-act-btn" data-unpin="${esc(t.address)}" title="Remove from watchlist">×</button>
-      </div>`;
-    })
-    .join('');
-
-  list.querySelectorAll('button[data-open-scan]').forEach((b) => {
-    b.addEventListener('click', () => {
-      switchTab('scan');
-      triggerTokenScan(b.getAttribute('data-open-scan'));
-    });
-  });
-  list.querySelectorAll('button[data-unpin]').forEach((b) => {
-    b.addEventListener('click', async () => {
-      const addr = b.getAttribute('data-unpin');
-      const st = await chrome.storage.local.get('pinnedTokens');
-      const next = (st.pinnedTokens || []).filter((x) => x.address !== addr);
-      await chrome.storage.local.set({ pinnedTokens: next });
-      renderPinnedWatchlist();
-      if (currentScanToken?.address === addr) renderScanCard(currentScanToken);
-    });
-  });
-}
 
 // Price Target Alerts
 async function renderPriceAlerts() {
@@ -494,7 +870,7 @@ async function renderPriceAlerts() {
   if (!wrap) return;
 
   if (!priceAlerts.length) {
-    wrap.innerHTML = `<span class="hint-line">Click + on any row or enter a target price above.</span>`;
+    wrap.innerHTML = `<span class="hint-line">Expand any coin for 1-click +/-5% alerts or enter a target above.</span>`;
     return;
   }
 
@@ -530,7 +906,7 @@ document.getElementById('btn-add-alert')?.addEventListener('click', async () => 
   const next = [
     { id: `${Date.now().toString(36)}`, sym, condition, target, triggered: false, createdAt: Date.now() },
     ...priceAlerts,
-  ].slice(0, 8);
+  ].slice(0, 10);
   await chrome.storage.local.set({ priceAlerts: next });
   if (targetInput) targetInput.value = '';
   renderPriceAlerts();
@@ -538,15 +914,17 @@ document.getElementById('btn-add-alert')?.addEventListener('click', async () => 
 });
 
 // =========================================================================
-// TAB 2: ON-CHAIN TOKEN SCANNER
+// TAB 2: ON-CHAIN TOKEN SCANNER (UNIFIED WITH MARKET WATCHLIST)
 // =========================================================================
 async function renderScanCard(token) {
   const card = document.getElementById('scan-result-card');
   if (!card || !token) return;
   currentScanToken = token;
 
-  const { pinnedTokens = [] } = await chrome.storage.local.get('pinnedTokens');
-  const isPinned = pinnedTokens.some((p) => p.address.toLowerCase() === token.address.toLowerCase());
+  const dexId = `dex:${token.chainId || 'solana'}:${token.address}`;
+  const isTracked = currentMarket.some(
+    (m) => m.id?.toLowerCase() === dexId.toLowerCase() || (m.address && m.address.toLowerCase() === token.address.toLowerCase())
+  );
 
   const lvl = token.safety?.level || 'SAFE';
   const badgeCls = lvl === 'SAFE' || lvl === 'VERIFIED LIQ' ? 'safe' : lvl === 'HIGH RISK' ? 'risk' : 'warn';
@@ -564,8 +942,8 @@ async function renderScanCard(token) {
     token.safety?.lpLockedPct != null
       ? `LP Locked: ${token.safety.lpLockedPct}%`
       : token.safety?.auditedByRugCheck
-      ? 'RugCheck Verified'
-      : `${token.chainId.toUpperCase()} Pool`;
+        ? 'RugCheck Verified'
+        : `${token.chainId.toUpperCase()} Pool`;
   const volRatioTxt = token.volToMcPct != null ? ` · Vol/MCap ${token.volToMcPct}%` : '';
   const riskTxt = risks.length
     ? `Flags: ${risks.map((r) => esc(r.name)).join(' · ')}`
@@ -587,7 +965,7 @@ async function renderScanCard(token) {
         <div class="muted-mono" style="margin-top:2px">${esc(token.chainId.toUpperCase())} · ${esc(token.dexId.toUpperCase())} · Age ${esc(token.ageLabel)} · ${esc(shortCA(token.address))}</div>
       </div>
       <div class="scan-badges">
-        <button id="btn-pin-token" class="pin-btn ${isPinned ? 'pinned' : ''}">${isPinned ? 'PINNED' : 'PIN'}</button>
+        <button id="btn-pin-token" class="pin-btn ${isTracked ? 'pinned' : ''}">${isTracked ? 'TRACKING' : '+ TRACK'}</button>
         <span class="status-tag ${badgeCls}">${esc(lvl)}</span>
       </div>
     </div>
@@ -624,34 +1002,32 @@ async function renderScanCard(token) {
     </div>
   `;
 
-  document.getElementById('btn-pin-token')?.addEventListener('click', async () => {
-    const st = await chrome.storage.local.get('pinnedTokens');
-    const list = st.pinnedTokens || [];
-    const exists = list.some((p) => p.address.toLowerCase() === token.address.toLowerCase());
-    let next;
-    if (exists) {
-      next = list.filter((p) => p.address.toLowerCase() !== token.address.toLowerCase());
-      setYuzuLine(`Removed ${token.symbol} from watchlist.`, 'shy');
+  document.getElementById('btn-pin-token')?.addEventListener('click', () => {
+    const existing = currentMarket.find(
+      (m) => m.id?.toLowerCase() === dexId.toLowerCase() || (m.address && m.address.toLowerCase() === token.address.toLowerCase())
+    );
+    if (existing) {
+      chrome.runtime.sendMessage({ type: 'WATCHLIST_MUTATE', action: 'remove', id: existing.id }, (resp) => {
+        if (resp?.market) renderPulse(resp.market, resp.source, resp.updatedAt, resp.fearGreed, resp.solNetwork, resp.badgeSym);
+        renderScanCard(token);
+        setYuzuLine(`Removed ${token.symbol} from Market watchlist.`, 'shy');
+      });
     } else {
-      next = [
-        {
-          symbol: token.symbol,
-          name: token.name,
-          address: token.address,
-          chainId: token.chainId,
-          priceUsd: token.priceUsd,
-          pct24h: token.priceChange?.h24 || 0,
-          liquidityUsd: token.liquidityUsd,
-          marketCap: token.marketCap,
-          pairUrl: token.pairUrl,
-        },
-        ...list,
-      ].slice(0, 8);
-      setYuzuLine(`Added ${token.symbol} to Market watchlist.`, 'dance');
+      const coin = {
+        id: dexId,
+        sym: token.symbol,
+        name: token.name,
+        kind: 'dex',
+        address: token.address,
+        chainId: token.chainId,
+        pairUrl: token.pairUrl,
+      };
+      chrome.runtime.sendMessage({ type: 'WATCHLIST_MUTATE', action: 'add', coin }, (resp) => {
+        if (resp?.market) renderPulse(resp.market, resp.source, resp.updatedAt, resp.fearGreed, resp.solNetwork, resp.badgeSym);
+        renderScanCard(token);
+        setYuzuLine(`Added ${token.symbol} to your live Market watchlist.`, 'dance');
+      });
     }
-    await chrome.storage.local.set({ pinnedTokens: next });
-    renderScanCard(token);
-    renderPinnedWatchlist();
   });
 
   document.getElementById('btn-copy-scanned-ca')?.addEventListener('click', (e) => {
@@ -731,10 +1107,6 @@ function probeActiveTabContext() {
       if (!tab?.id || /^chrome:|^edge:|^about:/i.test(tab.url || '')) return;
       chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_CONTEXT' }, (ctx) => {
         if (chrome.runtime.lastError || !ctx?.ok) return;
-        activePageCtx = ctx;
-        const hostLbl = document.getElementById('ai-tab-host');
-        if (hostLbl && ctx.host) hostLbl.textContent = ctx.host;
-
         const items = [
           ...(ctx.detectedCAs || []).map((ca) => ({ label: shortCA(ca), q: ca })),
           ...(ctx.detectedTickers || []).slice(0, 4).map((t) => ({ label: t, q: t })),
@@ -753,7 +1125,7 @@ function probeActiveTabContext() {
         }
       });
     });
-  } catch {}
+  } catch { }
 }
 
 // =========================================================================
@@ -918,30 +1290,39 @@ document.getElementById('btn-reset-webstats')?.addEventListener('click', async (
 });
 
 // =========================================================================
-// TAB 4: LOCAL TOOLS (CONVERTER, R:R POSITION SIZER & NOTES — ZERO AI TOKENS)
+// TAB 4: LOCAL TOOLS (ANY-COIN CONVERTER, R:R SIZER & NOTES)
 // =========================================================================
-let liveSolPrice = 0;
-const convSol = document.getElementById('conv-sol');
-const convUsd = document.getElementById('conv-usd');
+const convSymSel = document.getElementById('conv-sym');
+const convCoinInp = document.getElementById('conv-coin');
+const convUsdInp = document.getElementById('conv-usd');
 
-function syncSolConverter(solPrice) {
-  liveSolPrice = Number(solPrice) || 0;
-  const rateEl = document.getElementById('calc-sol-rate');
-  if (rateEl && liveSolPrice > 0) rateEl.textContent = `1 SOL = ${fmtPrice(liveSolPrice)}`;
-  if (convSol && convUsd && liveSolPrice > 0 && document.activeElement !== convUsd) {
-    const s = parseFloat(convSol.value || '1') || 0;
-    convUsd.value = (s * liveSolPrice).toFixed(2);
+function getSelectedConvPrice() {
+  const sym = convSymSel?.value || 'SOL';
+  const c = currentMarket.find((m) => m.sym === sym);
+  return { sym, price: Number(c?.price) || 0 };
+}
+
+function syncConverterRate() {
+  const { sym, price } = getSelectedConvPrice();
+  const rateEl = document.getElementById('calc-coin-rate');
+  if (rateEl && price > 0) rateEl.textContent = `1 ${sym} = ${fmtPrice(price)}`;
+  if (convCoinInp && convUsdInp && price > 0 && document.activeElement !== convUsdInp) {
+    const qty = parseFloat(convCoinInp.value || '1') || 0;
+    convUsdInp.value = (qty * price).toFixed(2);
   }
 }
 
-convSol?.addEventListener('input', () => {
-  if (liveSolPrice > 0 && convUsd) {
-    convUsd.value = ((parseFloat(convSol.value || '0') || 0) * liveSolPrice).toFixed(2);
+convSymSel?.addEventListener('change', syncConverterRate);
+convCoinInp?.addEventListener('input', () => {
+  const { price } = getSelectedConvPrice();
+  if (price > 0 && convUsdInp) {
+    convUsdInp.value = ((parseFloat(convCoinInp.value || '0') || 0) * price).toFixed(2);
   }
 });
-convUsd?.addEventListener('input', () => {
-  if (liveSolPrice > 0 && convSol) {
-    convSol.value = ((parseFloat(convUsd.value || '0') || 0) / liveSolPrice).toFixed(4);
+convUsdInp?.addEventListener('input', () => {
+  const { price } = getSelectedConvPrice();
+  if (price > 0 && convCoinInp) {
+    convCoinInp.value = ((parseFloat(convUsdInp.value || '0') || 0) / price).toFixed(4);
   }
 });
 
@@ -1003,7 +1384,7 @@ document.getElementById('btn-clear-notes')?.addEventListener('click', () => {
 });
 
 // =========================================================================
-// RIGHT-CLICK CONTEXT MENU HANDOFF (SCANNER ONLY)
+// RIGHT-CLICK CONTEXT MENU HANDOFF
 // =========================================================================
 async function consumePendingAction(action) {
   if (!action || Date.now() - (action.ts || 0) > 60000) return;
@@ -1021,7 +1402,7 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 // =========================================================================
-// REFRESH & FOOTER CONTROLS
+// INITIAL BOOT & REFRESH
 // =========================================================================
 function requestRefresh() {
   const btn = document.getElementById('btn-refresh');
@@ -1034,21 +1415,22 @@ function requestRefresh() {
     clearTimeout(watchdog);
     btn?.classList.remove('spinning');
     if (resp?.ok && resp.market?.length) {
-      renderPulse(resp.market, resp.source, resp.updatedAt, resp.fearGreed, resp.solNetwork, resp.pinnedTokens);
+      renderPulse(resp.market, resp.source, resp.updatedAt, resp.fearGreed, resp.solNetwork, resp.badgeSym);
       renderPriceAlerts();
+      if (currentScanToken) renderScanCard(currentScanToken);
       return;
     }
     try {
-      const stored = await chrome.storage.local.get(['market', 'source', 'updatedAt', 'fearGreed', 'solNetwork', 'pinnedTokens']);
+      const stored = await chrome.storage.local.get(['market', 'source', 'updatedAt', 'fearGreed', 'solNetwork', 'badgeSym']);
       if (stored.market?.length) {
-        renderPulse(stored.market, stored.source, stored.updatedAt, stored.fearGreed, stored.solNetwork, stored.pinnedTokens);
-      } else if (speechEl) {
-        speechEl.textContent = 'Market feed unreachable. Click REFRESH to retry.';
+        renderPulse(stored.market, stored.source, stored.updatedAt, stored.fearGreed, stored.solNetwork, stored.badgeSym);
+      } else {
+        setYuzuLine('Market feed unreachable. Click REFRESH to retry.');
       }
-    } catch {}
+    } catch { }
   };
 
-  const watchdog = setTimeout(() => finish(null), 4800);
+  const watchdog = setTimeout(() => finish(null), 5000);
   try {
     chrome.runtime.sendMessage({ type: 'REFRESH_MARKET' }, (resp) => {
       if (chrome.runtime.lastError) finish(null);
@@ -1071,9 +1453,11 @@ chrome.storage.local
     'updatedAt',
     'fearGreed',
     'solNetwork',
-    'pinnedTokens',
+    'badgeSym',
+    'userBags',
     'lastScan',
-    'stageMode',
+    'yuzuStageSizeV2',
+    'yuzuMiniCam',
     'alphaNotes',
     'pendingAction',
   ])
@@ -1088,13 +1472,26 @@ chrome.storage.local
       btnAlerts.textContent = aOn ? 'ALERTS: ON' : 'ALERTS: OFF';
       btnAlerts.classList.toggle('off', !aOn);
     }
-    applyStageMode(st.stageMode || 'strip');
+
+    currentBadgeSym = st.badgeSym || 'SOL';
+    currentUserBags = st.userBags || {};
+
+    if (st.yuzuMiniCam) {
+      const idx = CAM_MODES.findIndex((c) => c.key === st.yuzuMiniCam);
+      if (idx >= 0) {
+        camModeIdx = idx;
+        if (btnStageCam) btnStageCam.textContent = CAM_MODES[idx].label;
+      }
+    }
+
+    // Default to LARGE 186px 3D stage unless user explicitly hid 3D in v2.5
+    applyStageVisibility(st.yuzuStageSizeV2 !== 'compact');
+
     if (alphaNotesEl && st.alphaNotes) alphaNotesEl.value = st.alphaNotes;
-    initPortfolioEditor();
     if (st.market?.length) {
-      renderPulse(st.market, st.source, st.updatedAt, st.fearGreed, st.solNetwork, st.pinnedTokens);
+      renderPulse(st.market, st.source, st.updatedAt, st.fearGreed, st.solNetwork, currentBadgeSym);
     } else {
-      renderPinnedWatchlist();
+      initPortfolioEditor();
     }
     if (st.lastScan) renderScanCard(st.lastScan);
     renderPriceAlerts();
