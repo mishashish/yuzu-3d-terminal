@@ -1,4 +1,4 @@
-# Chrome Web Store Submission Kit — $YUZU Terminal v2.5
+# Chrome Web Store Submission Kit — $YUZU Terminal v2.6
 
 ## 1. Upload Package
 - **Chrome Web Store ZIP:** `store-assets/yuzu-cws-upload.zip` (`manifest.json` at archive root).
@@ -7,7 +7,7 @@
 ## 2. Store Listing Fields
 - **Extension Name:** `$YUZU — 3D Companion, Crypto Watchlist & Token Scanner`
 - **Short Summary (max 132 chars):**
-  `Interactive 3D Yuzu companion with custom crypto search & watchlist, Solana DEX/RugCheck scanner, focus timer, and trading tools.`
+  `3D Yuzu companion with inline X/Twitter CA badges, DEX Paid & holder audit, read-only Solana wallet tracker, phishing shield & watchlist.`
 - **Category:** `Productivity`
 - **Language:** `English`
 - **Homepage URL:** `https://yuzuha-simulator.vercel.app`
@@ -15,27 +15,20 @@
 
 ## 3. Detailed Description
 ```text
-$YUZU Terminal v2.5 brings an interactive 3D Yuzu companion directly into your Chrome Popup & Side Panel alongside a customizable crypto watchlist, on-chain token scanner, local activity tracker, and trading utilities.
+$YUZU Terminal v2.6 combines an interactive 3D Yuzu companion in your Chrome Popup & Side Panel with pro Solana trading and safety utilities.
 
 MODULES:
-1. LARGE INTERACTIVE 3D STAGE:
-   - Retina 3D Yuzu viewport with live poses (Pet, Wave, Dance), camera zoom modes (Close, Waist, Full), outfit switcher, and voiced market briefs.
+1. INLINE X/TWITTER CA BADGES & ANTI-DRAINER SHIELD:
+   - Automatically badges Solana contract addresses in X/Twitter and social feeds with live Market Cap, Liquidity, 24h %, DEX Paid status, and 1-click Scan/Jupiter actions.
+   - Local typosquatting & drainer domain shield warns immediately on lookalike phishing clones of Phantom, Jupiter, Raydium, pump.fun, and DexScreener.
 
-2. MARKET & UNIVERSAL CRYPTO SEARCH:
-   - Search and track any cryptocurrency, ticker, or Solana/EVM contract address across Binance, OKX, CoinGecko, and DexScreener.
-   - Customizable watchlist with inline holdings tracker, 1-click +/-5% price alerts, column sorting, and custom Chrome toolbar badge coin selection.
-   - Crypto Fear & Greed Index with 7-day sparkline and live Solana mainnet TPS.
+2. DEEP ANTI-RUG SCANNER:
+   - Verifies DexScreener Paid Profile / CTO / Boosts, Mint & Freeze authorities, non-LP Top 10 wallet concentration, buy/sell pressure, and live SOL pool price impact.
 
-3. SCANNER:
-   - Automatic detection of Solana contract addresses and tickers on active web pages.
-   - Instant DexScreener + RugCheck v1 audit: price, market cap, liquidity, 24h volume, buy/sell flow, momentum, LP locks, and 1-click watchlist tracking.
+3. CUSTOM WATCHLIST, ENTRY PNL & READ-ONLY SOLANA WALLET:
+   - Search and track any cryptocurrency or DEX contract address.
+   - Track personal Qty + Avg Entry $ for live unrealized PnL, or paste any public Solana wallet/whale address for a 100% read-only net worth breakdown.
 
-4. ACTIVITY & TOOLS:
-   - Strictly local screen-time breakdown across categories & domains, plus a background focus/break timer.
-   - Multi-asset Crypto/USD converter, position Risk/Reward (R:R) calculator, and auto-saved local scratchpad.
+4. FOCUS TIMER, SCREEN-TIME & TRADING TOOLS:
+   - Strictly local screen-time analytics, Pomodoro focus timer, multi-coin USD converter, position R:R sizer, and scratchpad.
 ```
-
-## 4. Privacy Practices Tab
-- **Single Purpose Description:**
-  `Provides a 3D companion terminal combining customizable cryptocurrency market & token analytics, local focus/screen-time tracking, and position sizing utilities.`
-- **Data Usage Certification:** Check **"I do not collect or use user data"**.

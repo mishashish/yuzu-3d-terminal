@@ -1,5 +1,9 @@
 // =========================================================================
-// $YUZU EXTENSION v2.5.0 — UNIVERSAL CRYPTO WATCHLIST, SEARCH & SCANNER
+// $YUZU EXTENSION v2.6.0 — PRO SOLANA UTILITY SUITE
+// - Universal Crypto Search & Custom CEX/DEX Watchlist
+// - Deep Scanner: DEX Paid / CTO / Boosts + Mint/Freeze + Non-LP Top 10 Holders %
+// - Inline X/Twitter CA Quick-Badge Metadata Cache
+// - Read-Only Solana Wallet & Whale Portfolio Tracker (Zero Connect Risk)
 // =========================================================================
 
 const KNOWN_CEX_CATALOG = [
@@ -50,6 +54,7 @@ const DEFAULT_WATCHLIST = [
 ];
 
 let refreshInFlight = null;
+const quickCaCache = new Map(); // CA -> { ts, data }
 
 function todayKey() {
   const d = new Date();
@@ -77,7 +82,6 @@ async function getActiveWatchlist() {
   const st = await chrome.storage.local.get(['userWatchlist', 'pinnedTokens', 'watchlistMigratedV25']);
   let list = Array.isArray(st.userWatchlist) && st.userWatchlist.length ? st.userWatchlist : [...DEFAULT_WATCHLIST];
 
-  // One-time migration of legacy v2.4 pinnedTokens into unified userWatchlist
   if (!st.watchlistMigratedV25) {
     if (Array.isArray(st.pinnedTokens) && st.pinnedTokens.length) {
       for (const pt of st.pinnedTokens) {
@@ -119,7 +123,7 @@ function updateBadge(market, focusState, badgeSym = 'SOL') {
     const sign = target.pct >= 0 ? '+' : '';
     chrome.action.setBadgeText({ text: `${sign}${target.pct.toFixed(0)}%` });
     chrome.action.setBadgeBackgroundColor({ color: target.pct >= 0 ? '#15803d' : '#be123c' });
-  } catch { }
+  } catch {}
 }
 
 function enrichMarketRow(baseMeta, quote) {
@@ -159,13 +163,11 @@ async function fetchCexQuotes(cexItems) {
   if (!cexItems.length) return { resolved, source: '' };
   let primarySource = '';
 
-  // 1. Batch Binance for items with a known/candidate Binance symbol
   const binanceCandidates = cexItems.filter((c) => c.binance);
   if (binanceCandidates.length) {
     const symsParam = encodeURIComponent(JSON.stringify([...new Set(binanceCandidates.map((c) => c.binance))]));
     let arr = await fetchJson(`https://api.binance.com/api/v3/ticker/24hr?symbols=${symsParam}`, 4000);
 
-    // If a custom symbol caused HTTP 400 in batch, probe individually so valid ones still succeed
     if (!Array.isArray(arr) && binanceCandidates.length > 1) {
       const indiv = await Promise.all(
         binanceCandidates.map((c) => fetchJson(`https://api.binance.com/api/v3/ticker/24hr?symbol=${c.binance}`, 3200))
@@ -191,7 +193,6 @@ async function fetchCexQuotes(cexItems) {
     }
   }
 
-  // 2. OKX fallback for any unresolved CEX coins (e.g. HYPE, or if Binance is geo-blocked)
   const missingAfterBinance = cexItems.filter((c) => !resolved.has(c.id));
   if (missingAfterBinance.length) {
     const okxResults = await Promise.all(
@@ -222,7 +223,6 @@ async function fetchCexQuotes(cexItems) {
     }
   }
 
-  // 3. CoinGecko fallback for long-tail CEX coins with a CoinGecko ID
   const missingAfterOkx = cexItems.filter((c) => !resolved.has(c.id) && c.cg);
   if (missingAfterOkx.length) {
     const ids = [...new Set(missingAfterOkx.map((c) => c.cg))].join(',');
@@ -286,7 +286,6 @@ async function searchCrypto(rawQuery) {
   const isSolanaCA = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(q);
   const isEvmCA = /^0x[a-fA-F0-9]{40}$/.test(q);
 
-  // Direct Contract Address lookup via DexScreener
   if (isSolanaCA || isEvmCA) {
     const dexJson = await fetchJson(`https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(q)}`, 5000);
     const pairs = Array.isArray(dexJson?.pairs) ? dexJson.pairs : [];
@@ -316,7 +315,6 @@ async function searchCrypto(rawQuery) {
     return { ok: true, results };
   }
 
-  // Parallel CEX Catalog + Binance Direct Ticker + CoinGecko Search + DexScreener Search
   const catalogMatches = KNOWN_CEX_CATALOG.filter(
     (c) => c.sym.includes(upperQ) || c.name.toLowerCase().includes(lowerQ)
   ).slice(0, 5);
@@ -413,7 +411,6 @@ async function searchCrypto(rawQuery) {
     });
   }
 
-  // Append top liquid on-chain DEX tokens (Solana prioritized)
   const dexPairs = Array.isArray(dexSearch?.pairs) ? dexSearch.pairs : [];
   const sortedDex = [...dexPairs]
     .filter((p) => (Number(p.liquidity?.usd) || 0) >= 2500 && parseFloat(p.priceUsd || 0) > 0)
@@ -429,7 +426,6 @@ async function searchCrypto(rawQuery) {
     if (!addr || seenAddrs.has(addr.toLowerCase())) continue;
     seenAddrs.add(addr.toLowerCase());
     const sym = String(p.baseToken?.symbol || 'TOKEN').replace(/^\$+/, '').toUpperCase();
-    // Skip duplicate wrapped major tokens if already shown as SPOT
     if (usedSyms.has(sym) && /^(SOL|WSOL|BTC|WBTC|ETH|WETH|USDC|USDT)$/.test(sym)) continue;
 
     results.push({
@@ -450,6 +446,175 @@ async function searchCrypto(rawQuery) {
   }
 
   return { ok: true, results };
+}
+
+// =========================================================================
+// FAST INLINE X/TWITTER CA BADGE METADATA (90s IN-MEMORY CACHE)
+// =========================================================================
+async function getQuickCaMeta(rawCa) {
+  const ca = String(rawCa || '').trim();
+  if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(ca)) return { ok: false };
+
+  const cached = quickCaCache.get(ca);
+  if (cached && Date.now() - cached.ts < 90 * 1000) {
+    return { ok: true, meta: cached.data };
+  }
+
+  const [dexJson, ordersJson] = await Promise.all([
+    fetchJson(`https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(ca)}`, 4000),
+    fetchJson(`https://api.dexscreener.com/orders/v1/solana/${encodeURIComponent(ca)}`, 3200),
+  ]);
+
+  const pairs = Array.isArray(dexJson?.pairs) ? dexJson.pairs : [];
+  if (!pairs.length) return { ok: false };
+
+  const best = [...pairs].sort((a, b) => (Number(b.liquidity?.usd) || 0) - (Number(a.liquidity?.usd) || 0))[0];
+  const liqUsd = Number(best.liquidity?.usd || 0);
+  const mcap = Number(best.marketCap || best.fdv || 0);
+  const pct24h = Number(best.priceChange?.h24 || 0);
+  const priceUsd = parseFloat(best.priceUsd || 0);
+  const sym = String(best.baseToken?.symbol || 'TOKEN').replace(/^\$+/, '').toUpperCase();
+
+  const orders = Array.isArray(ordersJson?.orders) ? ordersJson.orders : [];
+  const hasApprovedProfile = orders.some((o) => o.type === 'tokenProfile' && o.status === 'approved') || !!best.info;
+  const hasApprovedCto = orders.some((o) => o.type === 'communityTakeover' && o.status === 'approved');
+  const boosts = Number(best.boosts?.active || 0);
+
+  const meta = {
+    address: best.baseToken?.address || ca,
+    sym,
+    name: best.baseToken?.name || sym,
+    chainId: best.chainId || 'solana',
+    priceUsd,
+    mcap,
+    liqUsd,
+    pct24h,
+    dexPaid: hasApprovedProfile,
+    cto: hasApprovedCto,
+    boosts,
+    pairUrl: best.url || `https://dexscreener.com/solana/${ca}`,
+    riskFlag: liqUsd < 8000 ? 'LOW LIQ' : 'LIQ OK',
+  };
+
+  quickCaCache.set(ca, { ts: Date.now(), data: meta });
+  return { ok: true, meta };
+}
+
+// =========================================================================
+// READ-ONLY SOLANA WALLET & WHALE TRACKER (ZERO CONNECT RISK)
+// =========================================================================
+async function fetchReadOnlyWallet(rawAddr) {
+  const address = String(rawAddr || '').trim();
+  if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) {
+    return { ok: false, error: 'Enter a valid base58 Solana wallet address.' };
+  }
+
+  // 1. Fetch SOL + SPL accounts via Yuzu Vercel RPC proxy, with direct publicnode getBalance fallback
+  const [proxyData, directBal, st] = await Promise.all([
+    fetchJson(`https://yuzuha-simulator.vercel.app/api/wallet?address=${encodeURIComponent(address)}`, 6500),
+    fetchJson('https://solana-rpc.publicnode.com', 4200, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [address] }),
+    }),
+    chrome.storage.local.get('market'),
+  ]);
+
+  let solAmount = 0;
+  if (proxyData?.ok && typeof proxyData.sol === 'number') {
+    solAmount = proxyData.sol;
+  } else if (typeof directBal?.result?.value === 'number') {
+    solAmount = directBal.result.value / 1e9;
+  } else if (!proxyData?.ok) {
+    return { ok: false, error: 'Solana RPC temporarily busy. Try again in a moment.' };
+  }
+
+  // Get live SOL price
+  let solPrice = Number((st.market || []).find((m) => m.sym === 'SOL')?.price || 0);
+  if (!(solPrice > 0)) {
+    const b = await fetchJson('https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT', 3000);
+    solPrice = parseFloat(b?.price || 0);
+  }
+
+  const rawTokens = Array.isArray(proxyData?.tokens) ? proxyData.tokens : [];
+  const holdings = [];
+
+  if (solAmount > 0) {
+    holdings.push({
+      sym: 'SOL',
+      name: 'Solana',
+      mint: null,
+      amount: solAmount,
+      priceUsd: solPrice,
+      valueUsd: solAmount * solPrice,
+      pct24h: Number((st.market || []).find((m) => m.sym === 'SOL')?.pct || 0),
+    });
+  }
+
+  // Enrich SPL token mints via DexScreener + Stablecoin recognition
+  const STABLES = {
+    EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: { sym: 'USDC', name: 'USD Coin', price: 1 },
+    Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: { sym: 'USDT', name: 'Tether USD', price: 1 },
+  };
+
+  const dexMints = [];
+  for (const t of rawTokens) {
+    if (STABLES[t.mint]) {
+      holdings.push({
+        sym: STABLES[t.mint].sym,
+        name: STABLES[t.mint].name,
+        mint: t.mint,
+        amount: t.amount,
+        priceUsd: 1,
+        valueUsd: t.amount,
+        pct24h: 0,
+      });
+    } else {
+      dexMints.push(t);
+    }
+  }
+
+  if (dexMints.length) {
+    const mintSlice = dexMints.slice(0, 24);
+    const j = await fetchJson(
+      `https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(mintSlice.map((x) => x.mint).join(','))}`,
+      5000
+    );
+    const pairs = Array.isArray(j?.pairs) ? j.pairs : [];
+    for (const item of mintSlice) {
+      const best = pairs
+        .filter((p) => (p.baseToken?.address || '').toLowerCase() === item.mint.toLowerCase())
+        .sort((a, b) => (Number(b.liquidity?.usd) || 0) - (Number(a.liquidity?.usd) || 0))[0];
+      if (!best) continue;
+      const pr = parseFloat(best.priceUsd || 0);
+      const val = item.amount * pr;
+      if (val < 0.05) continue; // hide dust / spam air-drops worth < $0.05
+      holdings.push({
+        sym: String(best.baseToken?.symbol || 'SPL').replace(/^\$+/, '').toUpperCase(),
+        name: best.baseToken?.name || 'SPL Token',
+        mint: item.mint,
+        pairUrl: best.url,
+        amount: item.amount,
+        priceUsd: pr,
+        valueUsd: val,
+        pct24h: Number(best.priceChange?.h24 || 0),
+      });
+    }
+  }
+
+  holdings.sort((a, b) => b.valueUsd - a.valueUsd);
+  const totalUsd = holdings.reduce((s, h) => s + h.valueUsd, 0);
+
+  const walletSnap = {
+    address,
+    solAmount,
+    totalUsd,
+    holdings: holdings.slice(0, 15),
+    updatedAt: Date.now(),
+  };
+
+  await chrome.storage.local.set({ trackedWalletSnap: walletSnap, trackedWalletAddr: address });
+  return { ok: true, wallet: walletSnap };
 }
 
 async function fetchFearGreed(force = false) {
@@ -548,7 +713,7 @@ async function maybeNotifyMoversAndTargets(market) {
       message: `${bigMover.sym} moved ${sign}${bigMover.pct.toFixed(1)}% over 24h.`,
     });
     await chrome.storage.local.set({ lastAlertAt: Date.now() });
-  } catch { }
+  } catch {}
 }
 
 function ensureAlarm() {
@@ -556,7 +721,7 @@ function ensureAlarm() {
     chrome.alarms.get('yuzuMarketPoll', (existing) => {
       if (!existing) chrome.alarms.create('yuzuMarketPoll', { periodInMinutes: 1 });
     });
-  } catch { }
+  } catch {}
 }
 
 async function _doRefreshMarket() {
@@ -629,25 +794,25 @@ async function mutateWatchlist(msg) {
       const entry =
         c.kind === 'dex'
           ? {
-              id,
-              sym: cleanSym,
-              name: c.name || cleanSym,
-              kind: 'dex',
-              address: c.address,
-              chainId: c.chainId || 'solana',
-              pairUrl: c.pairUrl || `https://dexscreener.com/${c.chainId || 'solana'}/${c.address}`,
-              pinnedTop: false,
-            }
+            id,
+            sym: cleanSym,
+            name: c.name || cleanSym,
+            kind: 'dex',
+            address: c.address,
+            chainId: c.chainId || 'solana',
+            pairUrl: c.pairUrl || `https://dexscreener.com/${c.chainId || 'solana'}/${c.address}`,
+            pinnedTop: false,
+          }
           : {
-              id,
-              sym: cleanSym,
-              name: c.name || cleanSym,
-              kind: 'cex',
-              binance: c.binance !== undefined ? c.binance : `${cleanSym}USDT`,
-              okx: c.okx || `${cleanSym}-USDT`,
-              cg: c.cg || null,
-              pinnedTop: false,
-            };
+            id,
+            sym: cleanSym,
+            name: c.name || cleanSym,
+            kind: 'cex',
+            binance: c.binance !== undefined ? c.binance : `${cleanSym}USDT`,
+            okx: c.okx || `${cleanSym}-USDT`,
+            cg: c.cg || null,
+            pinnedTop: false,
+          };
       list = [...list, entry].slice(0, 24);
       await chrome.storage.local.set({ userWatchlist: list });
     }
@@ -674,7 +839,7 @@ async function mutateWatchlist(msg) {
 }
 
 // =========================================================================
-// ON-CHAIN TOKEN SCANNER (DexScreener + RugCheck v1)
+// DEEP ON-CHAIN TOKEN SCANNER (DEX PAID + MINT/FREEZE + TOP 10 HOLDERS %)
 // =========================================================================
 async function scanToken(rawQuery) {
   const q = String(rawQuery || '').trim();
@@ -701,12 +866,16 @@ async function scanToken(rawQuery) {
   });
   const best = sortedPairs[0];
   const baseAddr = best.baseToken?.address || q;
-  const isSol = best.chainId === 'solana';
+  const chainId = best.chainId || 'solana';
+  const isSol = chainId === 'solana';
 
-  let rug = null;
-  if (isSol && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(baseAddr)) {
-    rug = await fetchJson(`https://api.rugcheck.xyz/v1/tokens/${baseAddr}/report/summary`, 4200);
-  }
+  // Fetch Full RugCheck Report (Mint/Freeze + Top Holders + Insiders) & DexScreener Orders (DEX Paid / CTO) in parallel!
+  const [rugFull, ordersJson] = await Promise.all([
+    isSol && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(baseAddr)
+      ? fetchJson(`https://api.rugcheck.xyz/v1/tokens/${baseAddr}/report`, 5200)
+      : Promise.resolve(null),
+    fetchJson(`https://api.dexscreener.com/orders/v1/${encodeURIComponent(chainId)}/${encodeURIComponent(baseAddr)}`, 3600),
+  ]);
 
   const priceUsd = parseFloat(best.priceUsd || 0);
   const marketCap = Number(best.marketCap || best.fdv || 0);
@@ -725,19 +894,73 @@ async function scanToken(rawQuery) {
     h24: Number(best.priceChange?.h24 || 0),
   };
 
-  const risks = Array.isArray(rug?.risks)
-    ? rug.risks.slice(0, 4).map((r) => ({ name: r.name, level: r.level || 'warn' }))
+  // DEX Paid / CTO / Boosts analysis
+  const orders = Array.isArray(ordersJson?.orders) ? ordersJson.orders : [];
+  const dexPaid = orders.some((o) => o.type === 'tokenProfile' && o.status === 'approved') || !!best.info;
+  const dexCto = orders.some((o) => o.type === 'communityTakeover' && o.status === 'approved');
+  const dexAd = orders.some((o) => o.type === 'tokenAd' && o.status === 'approved');
+  const boosts = Number(best.boosts?.active || 0);
+
+  // RugCheck Authorities, LP Lock & Non-LP Holder Concentration
+  const risks = Array.isArray(rugFull?.risks)
+    ? rugFull.risks.slice(0, 4).map((r) => ({ name: r.name, level: r.level || 'warn' }))
     : [];
-  const scoreNorm = rug?.score_normalised != null ? Number(rug.score_normalised) : null;
-  const lpLockedPct = rug?.lpLockedPct != null ? Math.round(Number(rug.lpLockedPct)) : null;
+  const scoreNorm = rugFull?.score_normalised != null ? Number(rugFull.score_normalised) : null;
+  const mintRevoked = rugFull ? rugFull.mintAuthority === null : null;
+  const freezeRevoked = rugFull ? rugFull.freezeAuthority === null : null;
+  const totalHolders = Number(rugFull?.totalHolders || 0);
+
+  // Compute LP Lock % across markets if available
+  let lpLockedPct = null;
+  if (rugFull?.lpLockedPct != null) {
+    lpLockedPct = Math.round(Number(rugFull.lpLockedPct));
+  } else if (Array.isArray(rugFull?.markets) && rugFull.markets.length) {
+    const mLP = rugFull.markets
+      .map((m) => Number(m.lp?.lpLockedPct || 0))
+      .filter((v) => v > 0);
+    if (mLP.length) lpLockedPct = Math.round(Math.max(...mLP));
+  }
+
+  // Filter out known AMM/LP pool vaults & major CEX custody wallets when calculating Top 10 Holder Concentration
+  const knownMap = rugFull?.knownAccounts || {};
+  const rawHolders = Array.isArray(rugFull?.topHolders) ? rugFull.topHolders : [];
+  const nonLpHolders = rawHolders.filter((h) => {
+    const kOwner = knownMap[h.owner];
+    const kAddr = knownMap[h.address];
+    const t = String(kOwner?.type || kAddr?.type || '').toUpperCase();
+    const nm = String(kOwner?.name || kAddr?.name || '').toUpperCase();
+    if (/AMM|POOL|LOCKER|VAULT|RAYDIUM|ORCA|METEORA|PUMP\.FUN|EXCHANGE|CEX|BINANCE|COINBASE|OKX|BYBIT|KRAKEN|CRYPTO\.COM|UPBIT|KUCOIN|GATE\.IO/i.test(t + ' ' + nm)) {
+      return false;
+    }
+    return true;
+  });
+
+  const top10Slice = nonLpHolders.slice(0, 10);
+  const insidersCount = top10Slice.filter((h) => !!h.insider).length;
+  const top10Pct = top10Slice.length
+    ? Number(top10Slice.reduce((s, h) => s + Number(h.pct || 0), 0).toFixed(1))
+    : null;
+  const top1Pct = top10Slice.length ? Number(Number(top10Slice[0].pct || 0).toFixed(1)) : null;
 
   let safetyLevel = 'SAFE';
-  const hasDangerRisk = risks.some((r) => /danger|high|critical/i.test(r.level));
-  if (liquidityUsd < 5000 || hasDangerRisk || (scoreNorm != null && scoreNorm > 50)) {
+  const hasDangerRisk = risks.some((r) => /danger|high|critical/i.test(r.level)) || !!rugFull?.rugged;
+  if (
+    liquidityUsd < 5000 ||
+    hasDangerRisk ||
+    mintRevoked === false ||
+    (top10Pct != null && top10Pct > 55) ||
+    (scoreNorm != null && scoreNorm > 50)
+  ) {
     safetyLevel = 'HIGH RISK';
-  } else if (liquidityUsd < 25000 || risks.length >= 2 || (scoreNorm != null && scoreNorm > 20)) {
+  } else if (
+    liquidityUsd < 25000 ||
+    freezeRevoked === false ||
+    (top10Pct != null && top10Pct > 32) ||
+    risks.length >= 2 ||
+    (scoreNorm != null && scoreNorm > 20)
+  ) {
     safetyLevel = 'CAUTION';
-  } else if (!rug && !isSol) {
+  } else if (!rugFull && !isSol) {
     safetyLevel = liquidityUsd >= 50000 ? 'VERIFIED LIQ' : 'UNVERIFIED';
   }
 
@@ -753,27 +976,28 @@ async function scanToken(rawQuery) {
   const notes = [];
   if (safetyLevel === 'HIGH RISK') {
     pose = 'pout';
-    notes.push(
-      liquidityUsd < 5000
-        ? `Thin liquidity ($${Math.round(liquidityUsd).toLocaleString()}). High slippage risk.`
-        : `Audit flagged ${risks[0]?.name || 'elevated contract risk'}.`
-    );
+    if (mintRevoked === false) notes.push('Mint authority is still ACTIVE.');
+    else if (top10Pct != null && top10Pct > 55) notes.push(`Top 10 wallets hold ${top10Pct}% of supply.`);
+    else if (liquidityUsd < 5000) notes.push(`Thin liquidity ($${Math.round(liquidityUsd).toLocaleString()}).`);
+    else notes.push(`Audit flagged ${risks[0]?.name || 'elevated contract risk'}.`);
   } else if (safetyLevel === 'CAUTION') {
     pose = 'shy';
-    notes.push(`Moderate risk profile (Liquidity $${Math.round(liquidityUsd / 1000)}K).`);
+    notes.push(
+      top10Pct != null && top10Pct > 32
+        ? `Watch holder concentration (Top 10: ${top10Pct}%).`
+        : `Moderate risk profile (Liq $${Math.round(liquidityUsd / 1000)}K).`
+    );
   } else {
     pose = priceChange.h24 > 8 && buyRatioPct >= 52 ? 'dance' : 'peace';
     notes.push(
-      `Solid liquidity ($${liquidityUsd >= 1e6 ? (liquidityUsd / 1e6).toFixed(2) + 'M' : Math.round(liquidityUsd / 1000) + 'K'}) and clean contract check.`
+      `Clean check (${dexPaid ? 'DEX Paid' : 'Unpaid profile'}, Liq $${liquidityUsd >= 1e6 ? (liquidityUsd / 1e6).toFixed(2) + 'M' : Math.round(liquidityUsd / 1000) + 'K'}).`
     );
   }
 
-  if (buyRatioPct >= 56) notes.push(`Buy flow leads (${buyRatioPct}% buys, 1h ${priceChange.h1 >= 0 ? '+' : ''}${priceChange.h1.toFixed(1)}%).`);
-  else if (buyRatioPct <= 44) notes.push(`Sell pressure elevated (${100 - buyRatioPct}% sells).`);
-  else notes.push(`Balanced order flow (${buyRatioPct}% buys / ${100 - buyRatioPct}% sells).`);
+  if (buyRatioPct >= 56) notes.push(`Buys lead ${buyRatioPct}%.`);
+  else if (buyRatioPct <= 44) notes.push(`Sells elevated (${100 - buyRatioPct}%).`);
 
   const cleanSymbol = String(best.baseToken?.symbol || 'TOKEN').replace(/^\$+/, '');
-  const chainId = best.chainId || 'solana';
   const token = {
     id: `dex:${chainId}:${baseAddr}`,
     name: best.baseToken?.name || cleanSymbol || 'Unknown',
@@ -793,12 +1017,26 @@ async function scanToken(rawQuery) {
     buyRatioPct,
     priceChange,
     ageLabel,
+    dexStatus: {
+      paid: dexPaid,
+      cto: dexCto,
+      ad: dexAd,
+      boosts,
+    },
+    holders: {
+      top10Pct,
+      top1Pct,
+      totalHolders,
+      insidersCount,
+    },
     safety: {
       level: safetyLevel,
       scoreNorm,
       lpLockedPct,
+      mintRevoked,
+      freezeRevoked,
       risks,
-      auditedByRugCheck: !!rug,
+      auditedByRugCheck: !!rugFull,
     },
     verdict: notes.join(' '),
     pose,
@@ -812,7 +1050,7 @@ async function scanToken(rawQuery) {
       ...recentScans.filter((s) => s.address !== token.address),
     ].slice(0, 6);
     await chrome.storage.local.set({ recentScans: dedup, lastScan: token });
-  } catch { }
+  } catch {}
 
   return { ok: true, token };
 }
@@ -939,7 +1177,7 @@ function setupContextMenus() {
         contexts: ['selection'],
       });
     });
-  } catch { }
+  } catch {}
 }
 
 chrome.contextMenus?.onClicked?.addListener(async (info, tab) => {
@@ -954,14 +1192,14 @@ chrome.contextMenus?.onClicked?.addListener(async (info, tab) => {
       await chrome.sidePanel.open({ windowId: tab.windowId });
       return;
     }
-  } catch { }
+  } catch {}
   const res = await scanToken(sel.slice(0, 80));
   if (res.ok && res.token) {
     chrome.notifications.create(`yuzu-ctx-scan-${Date.now()}`, {
       type: 'basic',
       iconUrl: 'icons/icon128.png',
       title: `${res.token.symbol} (${res.token.safety.level})`,
-      message: `Price $${res.token.priceUsd.toPrecision(4)} | Liq $${Math.round(res.token.liquidityUsd).toLocaleString()} | Buys ${res.token.buyRatioPct}%`,
+      message: `Price $${res.token.priceUsd.toPrecision(4)} | Liq $${Math.round(res.token.liquidityUsd).toLocaleString()} | ${res.token.dexStatus.paid ? 'DEX PAID' : 'UNPAID'}`,
     });
   }
 });
@@ -986,7 +1224,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg?.type === 'REFRESH_MARKET') {
     refreshMarket()
       .then((data) => sendResponse(data ? { ok: true, ...data } : { ok: false }))
@@ -1009,6 +1247,29 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     scanToken(msg.query)
       .then((res) => sendResponse(res))
       .catch((err) => sendResponse({ ok: false, error: String(err?.message || 'Scan failed') }));
+    return true;
+  }
+  if (msg?.type === 'QUICK_CA_META') {
+    getQuickCaMeta(msg.ca)
+      .then((res) => sendResponse(res))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+  if (msg?.type === 'OPEN_SCAN_SIDEPANEL' && msg.ca) {
+    chrome.storage.local.set({ pendingAction: { type: 'scan', query: msg.ca, ts: Date.now() } }).then(async () => {
+      try {
+        if (sender?.tab?.windowId && chrome.sidePanel?.open) {
+          await chrome.sidePanel.open({ windowId: sender.tab.windowId });
+        }
+      } catch {}
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
+  if (msg?.type === 'TRACK_WALLET') {
+    fetchReadOnlyWallet(msg.address)
+      .then((res) => sendResponse(res))
+      .catch((err) => sendResponse({ ok: false, error: String(err?.message || 'Wallet lookup failed') }));
     return true;
   }
   if (msg?.type === 'TRACK_TIME') {

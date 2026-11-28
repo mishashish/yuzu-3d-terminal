@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "$YUZU — 3D Companion, Crypto Watchlist & Token Scanner",
-  "version": "2.5.0",
-  "description": "Interactive 3D Yuzu companion with custom crypto search & watchlist, Solana DEX/RugCheck scanner, focus timer, and trading tools.",
+  "version": "2.6.0",
+  "description": "3D Yuzu companion with inline X/Twitter CA badges, DEX Paid & holder audit, read-only Solana wallet tracker, phishing shield & watchlist.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -43,12 +43,8 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "content.js"
-      ],
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
       "run_at": "document_idle"
     }
   ]

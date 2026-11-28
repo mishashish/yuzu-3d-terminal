@@ -1,5 +1,5 @@
 // =========================================================================
-// $YUZU TERMINAL v2.5.0 — LARGE 3D STAGE + CUSTOM CRYPTO SEARCH & WATCHLIST
+// $YUZU TERMINAL v2.6.0 — PRO SOLANA & CRYPTO BROWSER SUITE
 // =========================================================================
 
 let lastBrief = '';
@@ -11,12 +11,14 @@ let currentFG = null;
 let currentSolNet = null;
 let currentBadgeSym = 'SOL';
 let currentUserBags = {};
+let currentWalletSnap = null;
 let currentScanToken = null;
 let expandedCoinId = null;
 let marketSort = { key: 'default', dir: 'desc' };
 let selectedFocusMin = 25;
 let selectedFocusMode = 'focus';
-let stageVisible = true; // Large 186px 3D stage ON by default!
+let stageVisible = true;
+let impactSolAmount = 5;
 
 const CAM_MODES = [
   { key: 'mini', label: 'CAM: CLOSE' },
@@ -118,6 +120,30 @@ function shortCA(a) {
   return a && a.length > 12 ? `${a.slice(0, 5)}...${a.slice(-4)}` : a || '';
 }
 
+// Normalize legacy number bag entry vs v2.6 { qty, entry } object
+function getBagRecord(sym) {
+  const raw = currentUserBags?.[sym];
+  if (raw == null) return { qty: 0, entry: 0 };
+  if (typeof raw === 'number') return { qty: raw > 0 ? raw : 0, entry: 0 };
+  if (typeof raw === 'object') {
+    return {
+      qty: Number(raw.qty) > 0 ? Number(raw.qty) : 0,
+      entry: Number(raw.entry) > 0 ? Number(raw.entry) : 0,
+    };
+  }
+  return { qty: 0, entry: 0 };
+}
+
+function setBagRecord(sym, qty, entry) {
+  const q = Number(qty) > 0 ? Number(qty) : 0;
+  const e = Number(entry) > 0 ? Number(entry) : 0;
+  if (q <= 0 && e <= 0) {
+    delete currentUserBags[sym];
+  } else {
+    currentUserBags[sym] = { qty: q, entry: e };
+  }
+}
+
 function setYuzuLine(text, pose = null) {
   const clean = stripEmojis(text);
   if (clean) {
@@ -138,7 +164,7 @@ function notify3D(payload) {
   if (!miniReady) return;
   try {
     yuzuFrame?.contentWindow?.postMessage(payload, '*');
-  } catch { }
+  } catch {}
 }
 
 window.addEventListener('message', (e) => {
@@ -202,7 +228,7 @@ document.getElementById('btn-open-sidepanel')?.addEventListener('click', async (
       await chrome.sidePanel.open({ windowId: win.id });
       window.close();
     }
-  } catch { }
+  } catch {}
 });
 
 function switchTab(tabName) {
@@ -290,11 +316,11 @@ btnSpeakCompact?.addEventListener('click', () => speakText(lastBrief));
 window.addEventListener('pagehide', () => {
   try {
     window.speechSynthesis?.cancel();
-  } catch { }
+  } catch {}
 });
 
 // =========================================================================
-// UNIVERSAL CRYPTO SEARCH & POPULAR DRAWER (TAB 1)
+// UNIVERSAL CRYPTO SEARCH & POPULAR DRAWER
 // =========================================================================
 const mSearchInput = document.getElementById('market-search-input');
 const mSearchClear = document.getElementById('btn-clear-msearch');
@@ -426,7 +452,6 @@ function runMarketSearch(raw) {
     return;
   }
 
-  // Also filter existing table live if short query, while querying global crypto API
   renderWatchlistRows();
 
   if (mSearchResults) {
@@ -486,7 +511,146 @@ function mutateWatchlist(payload, speechMsg = '') {
 }
 
 // =========================================================================
-// TAB 1: MARKET KPIs, PORTFOLIO, INTERACTIVE WATCHLIST & ALERTS
+// READ-ONLY SOLANA WALLET / WHALE TRACKER UI
+// =========================================================================
+const btnToggleWallet = document.getElementById('btn-toggle-wallet');
+const walletDrawer = document.getElementById('wallet-drawer');
+const walletAddrInput = document.getElementById('wallet-addr-input');
+const btnWalletSync = document.getElementById('btn-wallet-sync');
+
+function renderWalletHoldings(snap) {
+  currentWalletSnap = snap || null;
+  const nwEl = document.getElementById('wallet-net-worth');
+  const listEl = document.getElementById('wallet-holdings-list');
+  if (!nwEl || !listEl) return;
+
+  if (!snap || !Array.isArray(snap.holdings)) {
+    nwEl.textContent = 'No wallet synced';
+    listEl.innerHTML = `<span class="hint-line">Paste your Phantom/Solflare address or any whale wallet — 100% read-only.</span>`;
+    return;
+  }
+
+  const nwVal =
+    snap.totalUsd >= 10000
+      ? fmtCompactUsd(snap.totalUsd)
+      : `$${snap.totalUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  nwEl.textContent = `${shortCA(snap.address)} · ${nwVal}`;
+  nwEl.style.color = '#c8ff78';
+
+  if (!snap.holdings.length) {
+    listEl.innerHTML = `<span class="hint-line">Wallet has $0.00 in liquid SOL / SPL tokens.</span>`;
+    return;
+  }
+
+  listEl.innerHTML = snap.holdings
+    .map((h, idx) => {
+      const sign = h.pct24h >= 0 ? '+' : '';
+      const pCol = h.pct24h >= 0 ? '#c8ff78' : '#f87171';
+      const qtyTxt =
+        h.amount >= 1e9
+          ? `${(h.amount / 1e9).toFixed(2)}B`
+          : h.amount >= 1e6
+          ? `${(h.amount / 1e6).toFixed(2)}M`
+          : h.amount >= 1e3
+          ? `${(h.amount / 1e3).toFixed(1)}K`
+          : h.amount >= 1
+          ? h.amount.toFixed(2)
+          : h.amount.toPrecision(3);
+      const valTxt =
+        h.valueUsd >= 10000
+          ? fmtCompactUsd(h.valueUsd)
+          : h.valueUsd >= 1
+          ? `$${h.valueUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : `$${h.valueUsd.toFixed(4)}`;
+      return `<div class="w-row">
+        <div>
+          <b style="color:#ffffff">${esc(h.sym)}</b>
+          <span class="muted-mono"> · ${qtyTxt}</span>
+        </div>
+        <span style="color:${pCol}">${sign}${Number(h.pct24h || 0).toFixed(1)}%</span>
+        <b style="color:#e2e8f0">${valTxt}</b>
+        ${
+          h.mint && h.sym !== 'USDC' && h.sym !== 'USDT'
+            ? `<button class="inline-btn" data-wtrack-idx="${idx}" style="padding:2px 5px;font-size:8px">+ TRACK</button>`
+            : `<span style="width:42px"></span>`
+        }
+      </div>`;
+    })
+    .join('');
+
+  listEl.querySelectorAll('button[data-wtrack-idx]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-wtrack-idx') || '0', 10);
+      const h = snap.holdings[idx];
+      if (!h?.mint) return;
+      mutateWatchlist(
+        {
+          action: 'add',
+          coin: {
+            id: `dex:solana:${h.mint}`,
+            sym: h.sym,
+            name: h.name,
+            kind: 'dex',
+            address: h.mint,
+            chainId: 'solana',
+            pairUrl: h.pairUrl || `https://dexscreener.com/solana/${h.mint}`,
+          },
+        },
+        `Tracking ${h.sym} from wallet in Market.`
+      );
+    });
+  });
+
+  renderPortfolioValue();
+}
+
+function triggerWalletSync() {
+  const addr = String(walletAddrInput?.value || '').trim();
+  if (!addr) return;
+  if (btnWalletSync) {
+    btnWalletSync.textContent = 'WAIT';
+    btnWalletSync.disabled = true;
+  }
+  chrome.runtime.sendMessage({ type: 'TRACK_WALLET', address: addr }, (res) => {
+    if (btnWalletSync) {
+      btnWalletSync.textContent = 'SYNC';
+      btnWalletSync.disabled = false;
+    }
+    if (chrome.runtime.lastError || !res?.ok || !res.wallet) {
+      const err = res?.error || 'Could not load wallet.';
+      const listEl = document.getElementById('wallet-holdings-list');
+      if (listEl) listEl.innerHTML = `<span class="hint-line" style="color:#f87171">${esc(err)}</span>`;
+      setYuzuLine(err, 'pout');
+      return;
+    }
+    renderWalletHoldings(res.wallet);
+    const totFmt = res.wallet.totalUsd >= 10000 ? fmtCompactUsd(res.wallet.totalUsd) : `$${res.wallet.totalUsd.toFixed(2)}`;
+    setYuzuLine(`Synced wallet ${shortCA(addr)}: ${totFmt} across ${res.wallet.holdings.length} assets.`, 'dance');
+  });
+}
+
+btnToggleWallet?.addEventListener('click', () => {
+  if (!walletDrawer) return;
+  const open = walletDrawer.style.display === 'none';
+  walletDrawer.style.display = open ? 'flex' : 'none';
+  btnToggleWallet.classList.toggle('active', open);
+});
+
+btnWalletSync?.addEventListener('click', triggerWalletSync);
+walletAddrInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') triggerWalletSync();
+});
+
+document.getElementById('btn-wallet-clear')?.addEventListener('click', async () => {
+  if (walletAddrInput) walletAddrInput.value = '';
+  currentWalletSnap = null;
+  await chrome.storage.local.remove(['trackedWalletSnap', 'trackedWalletAddr']);
+  renderWalletHoldings(null);
+  renderPortfolioValue();
+});
+
+// =========================================================================
+// TAB 1: MARKET KPIs, ENTRY PNL PORTFOLIO & WATCHLIST
 // =========================================================================
 function renderFGSparkline(history) {
   const svg = document.getElementById('fg-sparkline');
@@ -549,6 +713,30 @@ function syncCoinDropdowns() {
   }
 }
 
+function formatPositionReadout(qty, entry, currentPrice) {
+  if (!(qty > 0)) return { text: '$0.00', subCls: '', rowText: '' };
+  const val = qty * currentPrice;
+  if (!(entry > 0)) {
+    return {
+      text: fmtPrice(val),
+      subCls: 'bag-sub',
+      rowText: `${qty} = ${fmtPrice(val)}`,
+    };
+  }
+  const cost = qty * entry;
+  const pnlUsd = val - cost;
+  const pnlPct = ((currentPrice - entry) / entry) * 100;
+  const sign = pnlUsd >= 0 ? '+' : '-';
+  const absPnl = Math.abs(pnlUsd);
+  const pnlStr = absPnl >= 1000 ? fmtCompactUsd(absPnl) : `$${absPnl.toFixed(2)}`;
+  return {
+    text: `${sign}${pnlStr} (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)`,
+    subCls: pnlUsd >= 0 ? 'pnl-up' : 'pnl-down',
+    rowText: `${fmtPrice(val)} (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)`,
+    color: pnlUsd >= 0 ? '#c8ff78' : '#f87171',
+  };
+}
+
 function renderWatchlistRows() {
   const list = document.getElementById('coin-list');
   const countLbl = document.getElementById('watchlist-count-lbl');
@@ -573,16 +761,16 @@ function renderWatchlistRows() {
       const span = (m.high24h || 0) - (m.low24h || 0);
       const posPct = span > 0 ? Math.min(95, Math.max(5, ((m.price - m.low24h) / span) * 100)) : 50;
 
-      const bagQty = Number(currentUserBags[m.sym]) || 0;
-      const bagUsd = bagQty * m.price;
+      const { qty: bagQty, entry: bagEntry } = getBagRecord(m.sym);
+      const posInfo = formatPositionReadout(bagQty, bagEntry, m.price);
       const subText =
         bagQty > 0
-          ? `${bagQty} = ${fmtPrice(bagUsd)}`
+          ? posInfo.rowText
           : m.liqUsd > 0
-          ? `Liq ${fmtCompactUsd(m.liqUsd)}`
-          : m.volUsd > 0
-          ? `Vol ${fmtCompactUsd(m.volUsd)}`
-          : m.name || 'Spot';
+            ? `Liq ${fmtCompactUsd(m.liqUsd)}`
+            : m.volUsd > 0
+              ? `Vol ${fmtCompactUsd(m.volUsd)}`
+              : m.name || 'Spot';
 
       return `<div class="coin-item-wrap ${isOpen ? 'open' : ''}" data-coin-id="${esc(id)}">
         <div class="row" data-toggle-row="${esc(id)}">
@@ -593,7 +781,7 @@ function renderWatchlistRows() {
               ${isBadge ? '<span class="mini-tag icon">ICON</span>' : ''}
               ${m.kind === 'dex' ? '<span class="mini-tag dex">DEX</span>' : ''}
             </div>
-            <span class="vol-sub ${bagQty > 0 ? 'bag-sub' : ''}">${esc(subText)}</span>
+            <span class="vol-sub ${posInfo.subCls}">${esc(subText)}</span>
           </div>
           <div class="range-track" title="24h Low ${fmtPrice(m.low24h)} — High ${fmtPrice(m.high24h)}">
             <span class="range-thumb" style="left:${posPct.toFixed(0)}%"></span>
@@ -604,9 +792,9 @@ function renderWatchlistRows() {
         </div>
 
         <div class="row-drawer">
-          <div class="drawer-top">
-            <div class="drawer-bag-group">
-              <span class="label">HOLDINGS</span>
+          <div class="drawer-inputs-row">
+            <div class="calc-field">
+              <label>HOLDINGS QTY</label>
               <input
                 type="number"
                 step="any"
@@ -614,15 +802,28 @@ function renderWatchlistRows() {
                 placeholder="0.00"
                 value="${bagQty > 0 ? bagQty : ''}"
                 data-inline-bag="${esc(m.sym)}"
-                class="field drawer-bag-inp"
+                class="field"
               />
-              <span class="muted-mono" data-inline-bag-val="${esc(m.sym)}">${bagQty > 0 ? fmtPrice(bagUsd) : '$0.00'}</span>
             </div>
-            <span class="muted-mono">L ${fmtPrice(m.low24h)} · H ${fmtPrice(m.high24h)}</span>
+            <div class="calc-field">
+              <label>AVG ENTRY ($)</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                placeholder="${m.price >= 1 ? m.price.toFixed(2) : m.price.toPrecision(3)}"
+                value="${bagEntry > 0 ? bagEntry : ''}"
+                data-inline-entry="${esc(m.sym)}"
+                class="field"
+              />
+            </div>
+            <div class="drawer-pnl-readout" data-inline-bag-val="${esc(m.sym)}" style="color:${posInfo.color || '#cbd5e1'}">
+              ${esc(posInfo.text)}
+            </div>
           </div>
           <div class="drawer-actions">
             <button class="d-btn ${m.pinnedTop ? 'active' : ''}" data-top-coin="${esc(id)}">${m.pinnedTop ? 'PINNED TOP' : 'PIN TOP'}</button>
-            <button class="d-btn ${isBadge ? 'active' : ''}" data-badge-sym="${esc(m.sym)}" title="Show this coin on Chrome icon &amp; page overlay">${isBadge ? 'ON ICON' : 'SET ICON'}</button>
+            <button class="d-btn ${isBadge ? 'active' : ''}" data-badge-sym="${esc(m.sym)}" title="Show on Chrome icon &amp; page overlay">${isBadge ? 'ON ICON' : 'SET ICON'}</button>
             <button class="d-btn" data-quick-alert="${esc(m.sym)}" data-qdir="above" data-qprice="${m.price}">+5% ALERT</button>
             <button class="d-btn" data-quick-alert="${esc(m.sym)}" data-qdir="below" data-qprice="${m.price}">-5% ALERT</button>
             <a class="d-btn" href="${esc(m.chartUrl)}" target="_blank" rel="noopener">CHART</a>
@@ -633,7 +834,6 @@ function renderWatchlistRows() {
     })
     .join('');
 
-  // Row expand/collapse
   list.querySelectorAll('[data-toggle-row]').forEach((rowEl) => {
     rowEl.addEventListener('click', (e) => {
       if (e.target.closest('button[data-del-coin]')) return;
@@ -643,7 +843,6 @@ function renderWatchlistRows() {
     });
   });
 
-  // Remove coin
   list.querySelectorAll('button[data-del-coin]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -654,31 +853,39 @@ function renderWatchlistRows() {
     });
   });
 
-  // Inline Holdings input
-  list.querySelectorAll('input[data-inline-bag]').forEach((inp) => {
-    inp.addEventListener('click', (e) => e.stopPropagation());
-    inp.addEventListener('input', async () => {
-      const sym = inp.getAttribute('data-inline-bag');
-      const v = parseFloat(inp.value || '0');
-      if (v > 0) currentUserBags[sym] = v;
-      else delete currentUserBags[sym];
+  // Live Qty + Avg Entry $ personal PnL updater
+  const bindPosInputs = (sym) => {
+    const qInp = list.querySelector(`input[data-inline-bag="${CSS.escape(sym)}"]`);
+    const eInp = list.querySelector(`input[data-inline-entry="${CSS.escape(sym)}"]`);
+    const valEl = list.querySelector(`[data-inline-bag-val="${CSS.escape(sym)}"]`);
+    const onInput = async () => {
+      const q = parseFloat(qInp?.value || '0') || 0;
+      const e = parseFloat(eInp?.value || '0') || 0;
+      setBagRecord(sym, q, e);
       await chrome.storage.local.set({ userBags: currentUserBags });
       const coin = currentMarket.find((x) => x.sym === sym);
-      const valSpan = list.querySelector(`[data-inline-bag-val="${CSS.escape(sym)}"]`);
-      if (valSpan && coin) valSpan.textContent = v > 0 ? fmtPrice(v * coin.price) : '$0.00';
+      if (valEl && coin) {
+        const info = formatPositionReadout(q, e, coin.price);
+        valEl.textContent = info.text;
+        valEl.style.color = info.color || '#cbd5e1';
+      }
       renderPortfolioValue();
       initPortfolioEditor();
-    });
-  });
+    };
+    qInp?.addEventListener('click', (ev) => ev.stopPropagation());
+    eInp?.addEventListener('click', (ev) => ev.stopPropagation());
+    qInp?.addEventListener('input', onInput);
+    eInp?.addEventListener('input', onInput);
+  };
 
-  // Pin to Top
+  for (const m of rows) bindPosInputs(m.sym);
+
   list.querySelectorAll('button[data-top-coin]').forEach((btn) => {
     btn.addEventListener('click', () => {
       mutateWatchlist({ action: 'toggleTop', id: btn.getAttribute('data-top-coin') });
     });
   });
 
-  // Set as Chrome Toolbar Icon & Overlay Badge coin
   list.querySelectorAll('button[data-badge-sym]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const sym = btn.getAttribute('data-badge-sym');
@@ -688,7 +895,6 @@ function renderWatchlistRows() {
     });
   });
 
-  // 1-Click +5% / -5% Alert
   list.querySelectorAll('button[data-quick-alert]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const sym = btn.getAttribute('data-quick-alert');
@@ -708,7 +914,6 @@ function renderWatchlistRows() {
     });
   });
 
-  // Audit DEX coin in Scanner
   list.querySelectorAll('button[data-open-scan]').forEach((btn) => {
     btn.addEventListener('click', () => {
       switchTab('scan');
@@ -717,7 +922,6 @@ function renderWatchlistRows() {
   });
 }
 
-// Column header sorting
 document.querySelectorAll('.th-sort').forEach((th) => {
   th.addEventListener('click', () => {
     const key = th.getAttribute('data-sort') || 'default';
@@ -787,7 +991,6 @@ function renderPulse(market, source = '', updatedAt = 0, fg = null, solNet = nul
   renderPortfolioValue();
 }
 
-// Portfolio Estimator (Supports ALL coins in Watchlist)
 async function initPortfolioEditor() {
   const { userBags = {} } = await chrome.storage.local.get('userBags');
   currentUserBags = userBags;
@@ -798,20 +1001,21 @@ async function initPortfolioEditor() {
   const uniqueSyms = [...new Set(coins)].slice(0, 12);
 
   grid.innerHTML = uniqueSyms
-    .map(
-      (sym) => `<div class="calc-field">
+    .map((sym) => {
+      const { qty } = getBagRecord(sym);
+      return `<div class="calc-field">
         <label>${esc(sym)}</label>
-        <input type="number" step="any" min="0" placeholder="0" data-bag-sym="${esc(sym)}" value="${currentUserBags[sym] || ''}" class="field" />
-      </div>`
-    )
+        <input type="number" step="any" min="0" placeholder="0" data-bag-sym="${esc(sym)}" value="${qty > 0 ? qty : ''}" class="field" />
+      </div>`;
+    })
     .join('');
 
   grid.querySelectorAll('input[data-bag-sym]').forEach((inp) => {
     inp.addEventListener('input', async () => {
       const s = inp.getAttribute('data-bag-sym');
-      const v = parseFloat(inp.value || '0');
-      if (v > 0) currentUserBags[s] = v;
-      else delete currentUserBags[s];
+      const v = parseFloat(inp.value || '0') || 0;
+      const prev = getBagRecord(s);
+      setBagRecord(s, v, prev.entry);
       await chrome.storage.local.set({ userBags: currentUserBags });
       renderPortfolioValue();
       renderWatchlistRows();
@@ -826,29 +1030,51 @@ async function renderPortfolioValue() {
   const pnlEl = document.getElementById('bag-24h-pnl');
   if (!totalEl || !pnlEl) return;
 
-  let totalNow = 0;
-  let totalPrev = 0;
-  for (const [sym, qtyRaw] of Object.entries(userBags)) {
-    const qty = Number(qtyRaw) || 0;
-    if (qty <= 0) continue;
+  let manualNow = 0;
+  let manualPrev24 = 0;
+  let costBasisTotal = 0;
+  let costBasisCurrent = 0;
+
+  for (const sym of Object.keys(userBags)) {
+    const { qty, entry } = getBagRecord(sym);
+    if (!(qty > 0)) continue;
     const c = currentMarket.find((m) => m.sym.toUpperCase() === sym.toUpperCase());
     if (!c) continue;
     const val = qty * c.price;
-    const prev = val / (1 + (c.pct || 0) / 100);
-    totalNow += val;
-    totalPrev += prev;
+    const prev24 = val / (1 + (c.pct || 0) / 100);
+    manualNow += val;
+    manualPrev24 += prev24;
+    if (entry > 0) {
+      costBasisTotal += qty * entry;
+      costBasisCurrent += val;
+    }
   }
 
-  totalEl.textContent = `$${totalNow.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  if (totalNow <= 0) {
-    pnlEl.textContent = 'Click any coin or BAGS to set qty';
-    pnlEl.style.color = '#7c899e';
-  } else {
-    const diff = totalNow - totalPrev;
-    const pct = totalPrev > 0 ? (diff / totalPrev) * 100 : 0;
+  const walletUsd = Number(currentWalletSnap?.totalUsd || 0);
+  const grandTotal = manualNow > 0 ? manualNow : walletUsd;
+
+  totalEl.textContent = `$${grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  if (costBasisTotal > 0) {
+    const diff = costBasisCurrent - costBasisTotal;
+    const pct = (diff / costBasisTotal) * 100;
     const sign = diff >= 0 ? '+' : '-';
-    pnlEl.textContent = `${sign}$${Math.abs(diff).toFixed(2)} (${diff >= 0 ? '+' : ''}${pct.toFixed(1)}%)`;
+    const absD = Math.abs(diff);
+    const dStr = absD >= 1000 ? fmtCompactUsd(absD) : `$${absD.toFixed(2)}`;
+    pnlEl.textContent = `PnL ${sign}${dStr} (${diff >= 0 ? '+' : ''}${pct.toFixed(1)}%)`;
     pnlEl.style.color = diff >= 0 ? '#c8ff78' : '#f87171';
+  } else if (manualNow > 0) {
+    const diff = manualNow - manualPrev24;
+    const pct = manualPrev24 > 0 ? (diff / manualPrev24) * 100 : 0;
+    const sign = diff >= 0 ? '+' : '-';
+    pnlEl.textContent = `24h: ${sign}$${Math.abs(diff).toFixed(2)} (${diff >= 0 ? '+' : ''}${pct.toFixed(1)}%)`;
+    pnlEl.style.color = diff >= 0 ? '#c8ff78' : '#f87171';
+  } else if (walletUsd > 0) {
+    pnlEl.textContent = `Synced SOL Wallet (${currentWalletSnap.holdings.length} assets)`;
+    pnlEl.style.color = '#9be8ff';
+  } else {
+    pnlEl.textContent = 'Set Qty + Entry $ or sync WALLET';
+    pnlEl.style.color = '#7c899e';
   }
 }
 
@@ -914,8 +1140,19 @@ document.getElementById('btn-add-alert')?.addEventListener('click', async () => 
 });
 
 // =========================================================================
-// TAB 2: ON-CHAIN TOKEN SCANNER (UNIFIED WITH MARKET WATCHLIST)
+// TAB 2: DEEP SCANNER (DEX PAID + AUTHORITIES + TOP 10 HOLDERS + SLIPPAGE)
 // =========================================================================
+function computePriceImpactText(solSize, liquidityUsd) {
+  const solCoin = currentMarket.find((m) => m.sym === 'SOL');
+  const solUsd = Number(solCoin?.price || 75);
+  const tradeUsd = Math.max(0, Number(solSize) || 0) * solUsd;
+  const halfPool = Math.max(1, (Number(liquidityUsd) || 0) / 2);
+  const impactPct = (tradeUsd / (halfPool + tradeUsd)) * 100;
+  const label = impactPct < 1.2 ? 'LOW' : impactPct < 5 ? 'MODERATE' : 'HIGH SLIPPAGE';
+  const color = impactPct < 1.2 ? '#c8ff78' : impactPct < 5 ? '#fbbf24' : '#f87171';
+  return { text: `~${impactPct.toFixed(2)}% (${label})`, color };
+}
+
 async function renderScanCard(token) {
   const card = document.getElementById('scan-result-card');
   if (!card || !token) return;
@@ -937,17 +1174,44 @@ async function renderScanCard(token) {
     return `<div class="mom-cell"><div class="label" style="font-size:8px">${lbl}</div><b style="color:${col}">${v >= 0 ? '+' : ''}${v.toFixed(1)}%</b></div>`;
   };
 
+  // Deep Security Matrix cells (DEX Paid + Mint Auth + Freeze Auth + Top 10 Holders %)
+  const ds = token.dexStatus || {};
+  const dexPaidVal = ds.paid ? 'PAID' : ds.cto ? 'CTO' : 'UNPAID';
+  const dexPaidCol = ds.paid ? '#c8ff78' : ds.cto ? '#9be8ff' : '#94a3b8';
+  const dexBoostSub = ds.boosts > 0 ? `+${ds.boosts} Boosts` : ds.ad ? 'Ads Active' : 'DexScreener';
+
+  const mintRev = token.safety?.mintRevoked;
+  const mintVal = mintRev === true ? 'REVOKED' : mintRev === false ? 'ACTIVE' : '—';
+  const mintCol = mintRev === true ? '#c8ff78' : mintRev === false ? '#f87171' : '#94a3b8';
+
+  const freezeRev = token.safety?.freezeRevoked;
+  const freezeVal = freezeRev === true ? 'REVOKED' : freezeRev === false ? 'ACTIVE' : '—';
+  const freezeCol = freezeRev === true ? '#c8ff78' : freezeRev === false ? '#f87171' : '#94a3b8';
+
+  const hInfo = token.holders || {};
+  const t10 = hInfo.top10Pct;
+  const t10Val = t10 != null ? `${t10}%` : '—';
+  const t10Col = t10 == null ? '#94a3b8' : t10 <= 25 ? '#c8ff78' : t10 <= 45 ? '#fbbf24' : '#f87171';
+  const t1Sub =
+    hInfo.insidersCount > 0
+      ? `${hInfo.insidersCount} Insiders`
+      : hInfo.top1Pct != null
+      ? `#1 Holds ${hInfo.top1Pct}%`
+      : 'Excl. LP';
+
   const risks = token.safety?.risks || [];
   const lpTxt =
     token.safety?.lpLockedPct != null
       ? `LP Locked: ${token.safety.lpLockedPct}%`
       : token.safety?.auditedByRugCheck
-        ? 'RugCheck Verified'
-        : `${token.chainId.toUpperCase()} Pool`;
+      ? 'RugCheck Audited'
+      : `${token.chainId.toUpperCase()} Pool`;
   const volRatioTxt = token.volToMcPct != null ? ` · Vol/MCap ${token.volToMcPct}%` : '';
   const riskTxt = risks.length
     ? `Flags: ${risks.map((r) => esc(r.name)).join(' · ')}`
-    : `${esc(lpTxt)}${esc(volRatioTxt)} · No critical contract flags`;
+    : `${esc(lpTxt)}${esc(volRatioTxt)} · Clean contract check`;
+
+  const impactInfo = computePriceImpactText(impactSolAmount, token.liquidityUsd);
 
   const jupUrl =
     token.chainId === 'solana'
@@ -971,10 +1235,34 @@ async function renderScanCard(token) {
     </div>
 
     <div class="kpi-grid-4">
-      <div class="stat-cell"><span class="label" style="font-size:8px">PRICE</span><b>${fmtPrice(token.priceUsd)}</b></div>
-      <div class="stat-cell"><span class="label" style="font-size:8px">MCAP</span><b>${fmtCompactUsd(token.marketCap)}</b></div>
-      <div class="stat-cell"><span class="label" style="font-size:8px">LIQUIDITY</span><b>${fmtCompactUsd(token.liquidityUsd)}</b></div>
-      <div class="stat-cell"><span class="label" style="font-size:8px">24H VOL</span><b>${fmtCompactUsd(token.vol24h)}</b></div>
+      <div class="stat-cell"><span class="label" style="font-size:7.5px">PRICE</span><b>${fmtPrice(token.priceUsd)}</b></div>
+      <div class="stat-cell"><span class="label" style="font-size:7.5px">MCAP</span><b>${fmtCompactUsd(token.marketCap)}</b></div>
+      <div class="stat-cell"><span class="label" style="font-size:7.5px">LIQUIDITY</span><b>${fmtCompactUsd(token.liquidityUsd)}</b></div>
+      <div class="stat-cell"><span class="label" style="font-size:7.5px">24H VOL</span><b>${fmtCompactUsd(token.vol24h)}</b></div>
+    </div>
+
+    <!-- 4-Pillar Anti-Rug Security Matrix -->
+    <div class="sec-grid-4">
+      <div class="stat-cell">
+        <span class="label" style="font-size:7.5px">DEX PAID</span>
+        <b style="color:${dexPaidCol}">${dexPaidVal}</b>
+        <span class="sub-mini">${esc(dexBoostSub)}</span>
+      </div>
+      <div class="stat-cell">
+        <span class="label" style="font-size:7.5px">MINT AUTH</span>
+        <b style="color:${mintCol}">${mintVal}</b>
+        <span class="sub-mini">Supply lock</span>
+      </div>
+      <div class="stat-cell">
+        <span class="label" style="font-size:7.5px">FREEZE</span>
+        <b style="color:${freezeCol}">${freezeVal}</b>
+        <span class="sub-mini">Wallet lock</span>
+      </div>
+      <div class="stat-cell">
+        <span class="label" style="font-size:7.5px">TOP 10</span>
+        <b style="color:${t10Col}">${t10Val}</b>
+        <span class="sub-mini">${esc(t1Sub)}</span>
+      </div>
     </div>
 
     <div class="flow-wrap">
@@ -992,6 +1280,16 @@ async function renderScanCard(token) {
       ${momCell('24H', token.priceChange?.h24)}
     </div>
 
+    <!-- Pool Slippage / Price Impact Calculator -->
+    <div class="impact-strip">
+      <div class="impact-left">
+        <span class="label" style="color:#9be8ff">IMPACT FOR</span>
+        <input id="scan-impact-sol" type="number" step="any" min="0.1" value="${impactSolAmount}" class="field impact-inp" />
+        <span class="muted-mono">SOL</span>
+      </div>
+      <b id="scan-impact-out" style="color:${impactInfo.color}">${esc(impactInfo.text)}</b>
+    </div>
+
     <div class="audit-note" style="color:${risks.length ? '#fbbf24' : '#cbd5e1'}">${riskTxt}</div>
 
     <div class="scan-links">
@@ -1001,6 +1299,16 @@ async function renderScanCard(token) {
       <button id="btn-copy-scanned-ca" data-ca="${esc(token.address)}">COPY CA</button>
     </div>
   `;
+
+  document.getElementById('scan-impact-sol')?.addEventListener('input', (e) => {
+    impactSolAmount = parseFloat(e.currentTarget.value || '0') || 0;
+    const out = document.getElementById('scan-impact-out');
+    if (out) {
+      const info = computePriceImpactText(impactSolAmount, token.liquidityUsd);
+      out.textContent = info.text;
+      out.style.color = info.color;
+    }
+  });
 
   document.getElementById('btn-pin-token')?.addEventListener('click', () => {
     const existing = currentMarket.find(
@@ -1075,7 +1383,7 @@ function triggerTokenScan(query) {
     btn.disabled = true;
   }
   if (card) {
-    card.innerHTML = `<div class="empty-state"><p class="empty-desc">Querying DEX pools and RugCheck contract report for <b>${esc(shortCA(q))}</b>...</p></div>`;
+    card.innerHTML = `<div class="empty-state"><p class="empty-desc">Auditing DEX orders, Mint/Freeze authorities &amp; Top 10 holders for <b>${esc(shortCA(q))}</b>...</p></div>`;
   }
 
   chrome.runtime.sendMessage({ type: 'SCAN_TOKEN', query: q }, (res) => {
@@ -1125,7 +1433,7 @@ function probeActiveTabContext() {
         }
       });
     });
-  } catch { }
+  } catch {}
 }
 
 // =========================================================================
@@ -1362,7 +1670,6 @@ function recalcPnL() {
 });
 recalcPnL();
 
-// Notes Scratchpad
 const alphaNotesEl = document.getElementById('alpha-notes');
 let notesTimer = null;
 alphaNotesEl?.addEventListener('input', () => {
@@ -1384,7 +1691,7 @@ document.getElementById('btn-clear-notes')?.addEventListener('click', () => {
 });
 
 // =========================================================================
-// RIGHT-CLICK CONTEXT MENU HANDOFF
+// CONTEXT MENU & INLINE X BADGE HANDOFF
 // =========================================================================
 async function consumePendingAction(action) {
   if (!action || Date.now() - (action.ts || 0) > 60000) return;
@@ -1427,7 +1734,7 @@ function requestRefresh() {
       } else {
         setYuzuLine('Market feed unreachable. Click REFRESH to retry.');
       }
-    } catch { }
+    } catch {}
   };
 
   const watchdog = setTimeout(() => finish(null), 5000);
@@ -1455,6 +1762,8 @@ chrome.storage.local
     'solNetwork',
     'badgeSym',
     'userBags',
+    'trackedWalletSnap',
+    'trackedWalletAddr',
     'lastScan',
     'yuzuStageSizeV2',
     'yuzuMiniCam',
@@ -1465,7 +1774,7 @@ chrome.storage.local
     const wOn = st.widgetEnabled !== false;
     const aOn = st.alertsEnabled !== false;
     if (btnWidget) {
-      btnWidget.textContent = wOn ? 'OVERLAY: ON' : 'OVERLAY: OFF';
+      btnWidget.textContent = wOn ? 'X BADGES & OVERLAY: ON' : 'X BADGES & OVERLAY: OFF';
       btnWidget.classList.toggle('off', !wOn);
     }
     if (btnAlerts) {
@@ -1475,6 +1784,8 @@ chrome.storage.local
 
     currentBadgeSym = st.badgeSym || 'SOL';
     currentUserBags = st.userBags || {};
+    if (st.trackedWalletAddr && walletAddrInput) walletAddrInput.value = st.trackedWalletAddr;
+    if (st.trackedWalletSnap) renderWalletHoldings(st.trackedWalletSnap);
 
     if (st.yuzuMiniCam) {
       const idx = CAM_MODES.findIndex((c) => c.key === st.yuzuMiniCam);
@@ -1484,7 +1795,6 @@ chrome.storage.local
       }
     }
 
-    // Default to LARGE 186px 3D stage unless user explicitly hid 3D in v2.5
     applyStageVisibility(st.yuzuStageSizeV2 !== 'compact');
 
     if (alphaNotesEl && st.alphaNotes) alphaNotesEl.value = st.alphaNotes;
@@ -1492,6 +1802,7 @@ chrome.storage.local
       renderPulse(st.market, st.source, st.updatedAt, st.fearGreed, st.solNetwork, currentBadgeSym);
     } else {
       initPortfolioEditor();
+      renderWalletHoldings(st.trackedWalletSnap || null);
     }
     if (st.lastScan) renderScanCard(st.lastScan);
     renderPriceAlerts();
@@ -1506,7 +1817,7 @@ btnWidget?.addEventListener('click', async () => {
   const { widgetEnabled } = await chrome.storage.local.get('widgetEnabled');
   const next = widgetEnabled === false;
   await chrome.storage.local.set({ widgetEnabled: next });
-  btnWidget.textContent = next ? 'OVERLAY: ON' : 'OVERLAY: OFF';
+  btnWidget.textContent = next ? 'X BADGES & OVERLAY: ON' : 'X BADGES & OVERLAY: OFF';
   btnWidget.classList.toggle('off', !next);
 });
 

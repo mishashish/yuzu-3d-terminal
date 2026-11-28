@@ -16,7 +16,7 @@
       <div class="brand">
         <span class="dot" id="status-dot"></span>
         <span class="brand-name">$YUZU</span>
-        <span class="ver-pill">v2.5</span>
+        <span class="ver-pill">v2.6</span>
       </div>
       <div class="head-right">
         <span class="tag" id="feed-meta">SYNCING</span>
@@ -26,54 +26,52 @@
       </div>
     </header>
 
-    <!-- Prominent Interactive 3D Yuzu Stage -->
-    <section class="hero-stage-card" id="mini-stage-card">
-      <div class="hero-3d-viewport" id="mini-3d-wrap">
-        <div class="mini-boot" id="mini-boot-label">LOADING 3D YUZU...</div>
-        <iframe id="yuzu-3d-frame" allow="autoplay" title="Yuzu 3D Companion"></iframe>
+<head>
+  <meta charset="UTF-8" />
+  <title>$YUZU Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
 
-        <!-- Top-Left Interactive Pose Controls -->
         <div class="stage-hud stage-hud-left">
           <button class="stage-chip" data-pose="headpat" title="Pet Yuzu">PET</button>
           <button class="stage-chip" data-pose="wave" title="Wave">WAVE</button>
           <button class="stage-chip" data-pose="dance" title="Dance">DANCE</button>
         </div>
 
-        <!-- Top-Right Camera, Outfit & Voice Controls -->
         <div class="stage-hud stage-hud-right">
           <button class="stage-chip" id="btn-stage-cam" title="Switch 3D camera zoom">CAM: CLOSE</button>
           <button class="stage-chip" id="btn-stage-outfit" title="Switch Yuzu outfit style">OUTFIT</button>
           <button class="stage-chip accent" id="btn-speak" title="Voice live market brief">SPEAK</button>
         </div>
 
-        <!-- Bottom Live Brief Overlay -->
         <div class="stage-brief-bar">
           <span class="brief-tag">LIVE</span>
           <p class="yuzu-speech" id="yuzu-speech">Syncing custom crypto watchlist and Solana RPC...</p>
         </div>
       </div>
 
-      <!-- Compact Fallback Bar when 3D is hidden -->
       <div class="compact-brief-row" id="compact-brief-row">
         <span class="brief-tag">BRIEF</span>
         <p class="yuzu-speech-compact" id="yuzu-speech-compact">Syncing custom crypto watchlist...</p>
         <button class="inline-btn" id="btn-speak-compact">SPEAK</button>
       </div>
-    </section>
 
-    <!-- Primary Navigation -->
-    <nav class="tabs" id="main-tabs">
-      <button class="tab-btn active" data-tab="pulse">MARKET</button>
-      <button class="tab-btn" data-tab="scan">SCANNER</button>
-      <button class="tab-btn" data-tab="focus">ACTIVITY</button>
-      <button class="tab-btn" data-tab="tools">TOOLS</button>
-    </nav>
+      <!-- Bottom Live Brief Overlay -->
+      <div class="stage-brief-bar">
+        <span class="brief-tag">LIVE</span>
+        <p class="yuzu-speech" id="yuzu-speech">Syncing custom crypto watchlist and Solana RPC...</p>
+      </div>
+    </div>
 
     <!-- ========================================================= -->
-    <!-- TAB 1: MARKET (SEARCH ANY CRYPTO + CUSTOM WATCHLIST)      -->
+    <!-- TAB 1: MARKET (SEARCH + WALLET/PNL + CUSTOM WATCHLIST)    -->
     <!-- ========================================================= -->
     <main class="tab-panel active" id="tab-pulse">
-      <!-- Universal Crypto Search & Quick-Add -->
       <section class="market-search-box">
         <div class="search-input-wrap">
           <input
@@ -88,7 +86,6 @@
           <button class="inline-btn" id="btn-toggle-popular" title="Browse popular coins">+ TOP</button>
         </div>
 
-        <!-- Popular 1-Click Coins Drawer -->
         <div class="popular-drawer" id="popular-drawer" style="display: none">
           <div class="box-row">
             <span class="label">POPULAR COINS (1-CLICK TRACK)</span>
@@ -97,60 +94,77 @@
           <div class="chip-wrap" id="popular-chips"></div>
         </div>
 
-        <!-- Live Global Search Results Dropdown -->
         <div class="search-results-panel" id="market-search-results" style="display: none"></div>
       </section>
 
-      <!-- 3-Column Macro KPI Strip -->
-      <section class="kpi-strip">
-        <div class="kpi-tile">
-          <div class="kpi-head">
-            <span class="label">SENTIMENT</span>
-            <svg id="fg-sparkline" class="spark-svg" viewBox="0 0 46 14" preserveAspectRatio="none"></svg>
-          </div>
-          <div class="kpi-main">
-            <b id="fg-score" class="kpi-num">—</b>
-            <span id="fg-label" class="kpi-sub">Loading</span>
-          </div>
-          <div class="fg-bar-track">
-            <div class="fg-bar-fill" id="fg-bar-fill" style="width: 50%"></div>
-          </div>
+      <!-- Popular 1-Click Coins Drawer -->
+      <div class="popular-drawer" id="popular-drawer" style="display: none">
+        <div class="box-row">
+          <span class="label">POPULAR COINS (1-CLICK TRACK)</span>
+          <button class="inline-btn" id="btn-reset-watchlist" title="Restore default coins">RESET DEFAULT</button>
         </div>
+        <div class="chip-wrap" id="popular-chips"></div>
+      </div>
 
-        <div class="kpi-tile">
-          <span class="label">WATCHLIST 24H</span>
-          <b id="macro-breadth" class="kpi-num">—</b>
-          <span id="macro-vol" class="kpi-sub">Vol —</span>
-        </div>
+      <!-- Live Global Search Results Dropdown -->
+      <div class="search-results-panel" id="market-search-results" style="display: none"></div>
+    </section>
 
-        <div class="kpi-tile">
-          <span class="label">SOLANA</span>
-          <b id="sol-tps-pill" class="kpi-num">—</b>
-          <span id="sol-net-status" class="kpi-sub">Mainnet RPC</span>
+    <!-- 3-Column Macro KPI Strip -->
+    <section class="kpi-strip">
+      <div class="kpi-tile">
+        <div class="kpi-head">
+          <span class="label">SENTIMENT</span>
+          <svg id="fg-sparkline" class="spark-svg" viewBox="0 0 46 14" preserveAspectRatio="none"></svg>
         </div>
       </section>
 
-      <!-- Local Portfolio Bar (Supports All Tracked Coins) -->
+      <!-- Portfolio PnL + Read-Only Solana Wallet / Whale Tracker -->
       <section class="panel-box compact-box">
         <div class="box-row">
           <div class="bag-summary">
             <span class="label">PORTFOLIO</span>
             <b id="bag-total-val" class="mono-val">$0.00</b>
-            <span id="bag-24h-pnl" class="muted-mono">Click any coin or BAGS to set qty</span>
+            <span id="bag-24h-pnl" class="muted-mono">Set Qty + Entry $ on any coin</span>
           </div>
-          <button class="inline-btn" id="btn-edit-bags">BAGS</button>
+          <div style="display: flex; gap: 4px; flex-shrink: 0">
+            <button class="inline-btn" id="btn-toggle-wallet" title="Track any public Solana wallet read-only">WALLET</button>
+            <button class="inline-btn" id="btn-edit-bags" title="Edit manual holdings">BAGS</button>
+          </div>
         </div>
+
+        <!-- Read-Only Public Solana Wallet / Whale Tracker Drawer -->
+        <div id="wallet-drawer" class="bag-editor" style="display: none">
+          <div class="box-row">
+            <span class="label">READ-ONLY SOLANA WALLET / WHALE TRACKER</span>
+            <span class="muted-mono" id="wallet-net-worth">No wallet synced</span>
+          </div>
+          <div class="search-row">
+            <input
+              id="wallet-addr-input"
+              type="text"
+              placeholder="Paste public Solana address (no wallet connect)..."
+              class="field"
+              spellcheck="false"
+            />
+            <button id="btn-wallet-sync" class="btn-primary">SYNC</button>
+            <button id="btn-wallet-clear" class="inline-btn" title="Clear wallet">×</button>
+          </div>
+          <div id="wallet-holdings-list" class="wallet-holdings-list"></div>
+        </div>
+
+        <!-- Manual Bags Quick Grid -->
         <div id="bag-editor" class="bag-editor" style="display: none">
           <div class="bag-inputs-grid" id="bag-inputs-grid"></div>
-          <span class="hint-line">Stored locally in browser. Zero wallet connection required.</span>
+          <span class="hint-line">Tip: Click any coin row below to also set your Avg Entry $ and track personal PnL.</span>
         </div>
-      </section>
+      </div>
 
       <!-- Custom Watchlist Table -->
       <section class="panel-box table-box">
         <div class="watchlist-top-bar">
           <span class="label" id="watchlist-count-lbl">WATCHLIST</span>
-          <span class="hint-line">Click any row for Holdings, Badge &amp; Alerts</span>
+          <span class="hint-line">Click row for Qty, Entry $ PnL &amp; Alerts</span>
         </div>
         <div class="table-head">
           <button class="th-sort active" data-sort="default">ASSET</button>
@@ -162,102 +176,111 @@
         <div class="coin-rows" id="coin-list"></div>
       </section>
 
-      <!-- Price Target Alerts -->
-      <section class="panel-box compact-box">
-        <div class="box-row">
-          <span class="label">PRICE ALERTS</span>
-          <span class="muted-mono" id="alert-count-lbl">0 active</span>
+      <div class="kpi-tile">
+        <span class="label">SOLANA</span>
+        <b id="sol-tps-pill" class="kpi-num">—</b>
+        <span id="sol-net-status" class="kpi-sub">Mainnet RPC</span>
+      </div>
+    </section>
+
+    <!-- Local Portfolio Bar (Supports All Tracked Coins) -->
+    <section class="panel-box compact-box">
+      <div class="box-row">
+        <div class="bag-summary">
+          <span class="label">PORTFOLIO</span>
+          <b id="bag-total-val" class="mono-val">$0.00</b>
+          <span id="bag-24h-pnl" class="muted-mono">Click any coin or BAGS to set qty</span>
         </div>
-        <div class="alert-form">
-          <select id="alert-sym" class="field sm"></select>
-          <select id="alert-cond" class="field sm">
-            <option value="above">&gt;=</option>
-            <option value="below">&lt;=</option>
-          </select>
-          <input id="alert-target" type="number" step="any" placeholder="Target USD" class="field" />
-          <button id="btn-add-alert" class="btn-primary">ADD</button>
-        </div>
-        <div id="alert-pills" class="chip-wrap"></div>
-      </section>
-    </main>
+        <button class="inline-btn" id="btn-edit-bags">BAGS</button>
+      </div>
+      <div id="bag-editor" class="bag-editor" style="display: none">
+        <div class="bag-inputs-grid" id="bag-inputs-grid"></div>
+        <span class="hint-line">Stored locally in browser. Zero wallet connection required.</span>
+      </div>
+    </section>
 
     <!-- ========================================================= -->
-    <!-- TAB 2: SCANNER                                            -->
+    <!-- TAB 2: SCANNER (DEX PAID + MINT/FREEZE + HOLDERS + IMPACT)-->
     <!-- ========================================================= -->
     <main class="tab-panel" id="tab-scan">
       <section class="search-row">
         <input
           id="scan-input"
           type="text"
-          placeholder="Contract address or ticker (press / to focus)"
+          placeholder="Contract address or ticker (auto-badged on X)"
           class="field"
           spellcheck="false"
         />
         <button id="btn-scan-go" class="btn-primary">SCAN</button>
       </section>
 
-      <section class="group-block" id="page-detected-box" style="display: none">
-        <span class="label">DETECTED ON CURRENT TAB</span>
-        <div class="chip-wrap" id="page-detected-chips"></div>
-      </section>
+    <!-- Price Target Alerts -->
+    <section class="panel-box compact-box">
+      <div class="box-row">
+        <span class="label">PRICE ALERTS</span>
+        <span class="muted-mono" id="alert-count-lbl">0 active</span>
+      </div>
+      <div class="alert-form">
+        <select id="alert-sym" class="field sm"></select>
+        <select id="alert-cond" class="field sm">
+          <option value="above">&gt;=</option>
+          <option value="below">&lt;=</option>
+        </select>
+        <input id="alert-target" type="number" step="any" placeholder="Target USD" class="field" />
+        <button id="btn-add-alert" class="btn-primary">ADD</button>
+      </div>
+      <div id="alert-pills" class="chip-wrap"></div>
+    </section>
+  </main>
 
-      <section class="group-block" id="recent-scans-box" style="display: none">
-        <span class="label">RECENT SCANS</span>
-        <div class="chip-wrap" id="recent-scan-chips"></div>
-      </section>
+  <!-- ========================================================= -->
+  <!-- TAB 2: SCANNER                                            -->
+  <!-- ========================================================= -->
+  <main class="tab-panel" id="tab-scan">
+    <section class="search-row">
+      <input id="scan-input" type="text" placeholder="Contract address or ticker (press / to focus)" class="field"
+        spellcheck="false" />
+      <button id="btn-scan-go" class="btn-primary">SCAN</button>
+    </section>
 
       <section id="scan-result-card" class="panel-box scan-card">
         <div class="empty-state">
-          <p class="empty-title">On-Chain Liquidity &amp; Contract Audit</p>
+          <p class="empty-title">Deep Anti-Rug &amp; DEX Paid Audit</p>
           <p class="empty-desc">
-            Paste any Solana or EVM contract address or ticker above to inspect DEX liquidity, 24h buy/sell pressure, LP locks, and add directly to your Market watchlist.
+            Paste any Solana or EVM contract address to verify <b>DEX Paid / Boosts</b>, <b>Mint &amp; Freeze authority</b>, <b>Top 10 holder concentration</b>, and <b>SOL slippage impact</b>. CAs on X/Twitter are also badged automatically in-feed.
           </p>
         </div>
-      </section>
-    </main>
-
-    <!-- ========================================================= -->
-    <!-- TAB 3: ACTIVITY                                           -->
-    <!-- ========================================================= -->
-    <main class="tab-panel" id="tab-focus">
-      <section class="panel-box">
-        <div class="focus-layout">
-          <div class="focus-left">
-            <span class="label" id="focus-mode-lbl">FOCUS TIMER // READY</span>
-            <div class="timer-digits" id="focus-timer-display">25:00</div>
-            <span class="muted-mono" id="focus-streak-lbl">Completed today: 0 sessions (0m)</span>
+        <div class="focus-right">
+          <div class="preset-row">
+            <button class="seg-btn active" data-fmin="25" data-fmode="focus">25M</button>
+            <button class="seg-btn" data-fmin="45" data-fmode="focus">45M</button>
+            <button class="seg-btn" data-fmin="5" data-fmode="break">5M BREAK</button>
           </div>
-          <div class="focus-right">
-            <div class="preset-row">
-              <button class="seg-btn active" data-fmin="25" data-fmode="focus">25M</button>
-              <button class="seg-btn" data-fmin="45" data-fmode="focus">45M</button>
-              <button class="seg-btn" data-fmin="5" data-fmode="break">5M BREAK</button>
-            </div>
-            <button class="btn-primary full-w" id="btn-focus-toggle">START SESSION</button>
-          </div>
+          <button class="btn-primary full-w" id="btn-focus-toggle">START SESSION</button>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="panel-box">
-        <div class="box-row">
-          <span class="label">SCREEN TIME TODAY</span>
-          <b class="mono-val" id="web-total-time">0m</b>
-        </div>
-        <div class="cat-stack-bar" id="cat-stack-bar"></div>
-        <div class="cat-grid" id="cat-legend"></div>
-      </section>
+    <section class="panel-box">
+      <div class="box-row">
+        <span class="label">SCREEN TIME TODAY</span>
+        <b class="mono-val" id="web-total-time">0m</b>
+      </div>
+      <div class="cat-stack-bar" id="cat-stack-bar"></div>
+      <div class="cat-grid" id="cat-legend"></div>
+    </section>
 
-      <section class="panel-box">
-        <div class="box-row">
-          <span class="label">TOP VISITED DOMAINS</span>
-          <button class="inline-btn" id="btn-reset-webstats" title="Clear today's counters">RESET</button>
-        </div>
-        <div id="top-domains-list" class="domain-list"></div>
-      </section>
-    </main>
+    <section class="panel-box">
+      <div class="box-row">
+        <span class="label">TOP VISITED DOMAINS</span>
+        <button class="inline-btn" id="btn-reset-webstats" title="Clear today's counters">RESET</button>
+      </div>
+      <div id="top-domains-list" class="domain-list"></div>
+    </section>
+  </main>
 
     <!-- ========================================================= -->
-    <!-- TAB 4: TOOLS (ANY-COIN CONVERTER, R:R SIZER & NOTES)      -->
+    <!-- TAB 4: TOOLS (ANY-COIN CONVERTER, R:R SIZER & SHIELD)     -->
     <!-- ========================================================= -->
     <main class="tab-panel" id="tab-tools">
       <section class="panel-box">
@@ -273,73 +296,68 @@
               <input id="conv-coin" type="number" step="any" value="1" class="field" />
             </div>
           </div>
-          <span class="swap-sep">=</span>
-          <div class="calc-field">
-            <label>USD VALUE</label>
-            <input id="conv-usd" type="number" step="any" placeholder="0.00" class="field" />
-          </div>
         </div>
-      </section>
+        <span class="swap-sep">=</span>
+        <div class="calc-field">
+          <label>USD VALUE</label>
+          <input id="conv-usd" type="number" step="any" placeholder="0.00" class="field" />
+        </div>
+      </div>
+    </section>
 
-      <section class="panel-box">
-        <div class="box-row">
-          <span class="label">POSITION &amp; RISK CALCULATOR</span>
-          <span class="muted-mono" id="rr-badge">R:R 1 : 3.5</span>
+    <section class="panel-box">
+      <div class="box-row">
+        <span class="label">POSITION &amp; RISK CALCULATOR</span>
+        <span class="muted-mono" id="rr-badge">R:R 1 : 3.5</span>
+      </div>
+      <div class="pnl-grid-4">
+        <div class="calc-field">
+          <label>SIZE ($)</label>
+          <input id="pnl-size" type="number" step="any" value="500" class="field" />
         </div>
-        <div class="pnl-grid-4">
-          <div class="calc-field">
-            <label>SIZE ($)</label>
-            <input id="pnl-size" type="number" step="any" value="500" class="field" />
-          </div>
-          <div class="calc-field">
-            <label>ENTRY ($)</label>
-            <input id="pnl-entry" type="number" step="any" value="100" class="field" />
-          </div>
-          <div class="calc-field">
-            <label>TARGET ($)</label>
-            <input id="pnl-target" type="number" step="any" value="135" class="field" />
-          </div>
-          <div class="calc-field">
-            <label>STOP ($)</label>
-            <input id="pnl-stop" type="number" step="any" value="90" class="field" />
-          </div>
+        <div class="calc-field">
+          <label>ENTRY ($)</label>
+          <input id="pnl-entry" type="number" step="any" value="100" class="field" />
         </div>
-        <div class="pnl-split">
-          <div class="pnl-box up" id="pnl-result">TARGET: +35.0% (+$175.00)</div>
-          <div class="pnl-box down" id="pnl-risk">STOP: -10.0% (-$50.00)</div>
+        <div class="calc-field">
+          <label>TARGET ($)</label>
+          <input id="pnl-target" type="number" step="any" value="135" class="field" />
         </div>
-      </section>
-
-      <section class="panel-box">
-        <div class="box-row">
-          <span class="label">SCRATCHPAD (LOCAL AUTO-SAVE)</span>
-          <div style="display: flex; gap: 5px">
-            <button class="inline-btn" id="btn-copy-notes">COPY</button>
-            <button class="inline-btn" id="btn-clear-notes">CLEAR</button>
-          </div>
+        <div class="calc-field">
+          <label>STOP ($)</label>
+          <input id="pnl-stop" type="number" step="any" value="90" class="field" />
         </div>
         <textarea
           id="alpha-notes"
-          rows="4"
+          rows="3"
           class="field notes-area"
-          placeholder="Save contract addresses, key levels, or quick notes..."
+          placeholder="Save contract addresses, whale wallets, or key levels..."
         ></textarea>
       </section>
 
       <section class="panel-box compact-box">
         <div class="box-row">
-          <span class="muted-mono">LIVE VOICE AI CHAT IS AVAILABLE ON THE WEB TERMINAL</span>
+          <span class="muted-mono">ANTI-DRAINER SHIELD: ACTIVE · VOICE AI ON WEB</span>
           <a class="hdr-btn link" href="https://yuzuha-simulator.vercel.app" target="_blank" rel="noopener">OPEN CHAT</a>
         </div>
-      </section>
-    </main>
+      </div>
+      <textarea id="alpha-notes" rows="4" class="field notes-area"
+        placeholder="Save contract addresses, key levels, or quick notes..."></textarea>
+    </section>
 
     <footer class="foot">
-      <button class="foot-btn" id="btn-widget">OVERLAY: ON</button>
+      <button class="foot-btn" id="btn-widget">X BADGES &amp; OVERLAY: ON</button>
       <button class="foot-btn" id="btn-alerts">ALERTS: ON</button>
       <button class="foot-btn icon-only" id="btn-refresh" title="Refresh watchlist">REFRESH</button>
     </footer>
 
-    <script src="popup.js"></script>
-  </body>
+  <footer class="foot">
+    <button class="foot-btn" id="btn-widget">OVERLAY: ON</button>
+    <button class="foot-btn" id="btn-alerts">ALERTS: ON</button>
+    <button class="foot-btn icon-only" id="btn-refresh" title="Refresh watchlist">REFRESH</button>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+
 </html>

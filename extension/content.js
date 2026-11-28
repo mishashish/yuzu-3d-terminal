@@ -1,9 +1,138 @@
 (async function () {
   if (window.top !== window || !chrome?.runtime?.id || !document.body) return;
 
-  const isYuzuTerminal = /yuzuha-simulator\.vercel\.app$/i.test(location.hostname);
+  const currentHost = location.hostname.toLowerCase().replace(/^www\./, '');
+  const isYuzuTerminal = /yuzuha-simulator\.vercel\.app$/i.test(currentHost);
 
-  // 1. Local Screen-Time Heartbeat (every 15s while tab is visible & focused)
+  // =========================================================================
+  // 1. ANTI-DRAINER & TYPOSQUAT PHISHING SHIELD (100% LOCAL, ZERO LATENCY)
+  // =========================================================================
+  const PROTECTED_BRANDS = [
+    { brand: 'Phantom Wallet', official: 'phantom.app', aliases: ['phantom.com'], keywords: ['phantom'] },
+    { brand: 'Jupiter Exchange', official: 'jup.ag', aliases: ['station.jup.ag', 'jup.eco'], keywords: ['jupiter', 'jup-ag', 'jupag'] },
+    { brand: 'Raydium DEX', official: 'raydium.io', aliases: [], keywords: ['raydium'] },
+    { brand: 'pump.fun', official: 'pump.fun', aliases: [], keywords: ['pumpfun', 'pump-fun'] },
+    { brand: 'DexScreener', official: 'dexscreener.com', aliases: [], keywords: ['dexscreener'] },
+    { brand: 'Solflare Wallet', official: 'solflare.com', aliases: [], keywords: ['solflare'] },
+    { brand: 'Backpack', official: 'backpack.app', aliases: ['backpack.exchange'], keywords: ['backpack'] },
+    { brand: 'Meteora', official: 'meteora.ag', aliases: [], keywords: ['meteora'] },
+    { brand: 'Magic Eden', official: 'magiceden.io', aliases: ['magiceden.us'], keywords: ['magiceden'] },
+    { brand: 'Orca DEX', official: 'orca.so', aliases: [], keywords: ['orca-dex'] },
+    { brand: 'MetaMask', official: 'metamask.io', aliases: [], keywords: ['metamask'] },
+    { brand: 'Uniswap', official: 'uniswap.org', aliases: [], keywords: ['uniswap'] },
+  ];
+
+  const SAFE_MAINSTREAM_ROOTS = [
+    'google.com', 'youtube.com', 'x.com', 'twitter.com', 'github.com', 'reddit.com',
+    'discord.com', 'telegram.org', 't.me', 'coingecko.com', 'coinmarketcap.com',
+    'binance.com', 'okx.com', 'bybit.com', 'solscan.io', 'rugcheck.xyz', 'birdeye.so',
+    'tradingview.com', 'vercel.app', 'medium.com', 'mirror.xyz', 'localhost', '127.0.0.1',
+  ];
+
+  function editDistance(a, b) {
+    if (Math.abs(a.length - b.length) > 2) return 99;
+    const dp = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+    for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        dp[i][j] =
+          a[i - 1] === b[j - 1]
+            ? dp[i - 1][j - 1]
+            : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+    return dp[a.length][b.length];
+  }
+
+  function normalizeHomoglyphs(s) {
+    return String(s || '')
+      .replace(/rn/g, 'm')
+      .replace(/vv/g, 'w')
+      .replace(/cl/g, 'd')
+      .replace(/0/g, 'o')
+      .replace(/1/g, 'l')
+      .replace(/-/g, '');
+  }
+
+  function detectPhishingClone(host) {
+    if (!host || SAFE_MAINSTREAM_ROOTS.some((r) => host === r || host.endsWith('.' + r))) return null;
+
+    for (const item of PROTECTED_BRANDS) {
+      const validDomains = [item.official, ...item.aliases];
+      if (validDomains.some((d) => host === d || host.endsWith('.' + d))) return null;
+    }
+
+    const parts = host.split('.');
+    const sld = parts.length >= 2 ? parts[parts.length - 2] : host;
+    const normSld = normalizeHomoglyphs(sld);
+
+    for (const item of PROTECTED_BRANDS) {
+      const offSld = item.official.split('.')[0];
+      const normOff = normalizeHomoglyphs(offSld);
+      // 1. Punycode homograph check
+      if (host.includes('xn--') && host.includes(offSld.slice(0, 3))) {
+        return { brand: item.brand, official: item.official, reason: 'Punycode homograph domain' };
+      }
+      // 2. Visual homoglyph or 1-char typosquatting (e.g. raydiurn.io, phant0m.app, dexscrener.com)
+      if (offSld.length >= 4 && sld !== offSld && (normSld === normOff || editDistance(normSld, normOff) <= 1 || editDistance(sld, offSld) <= 1)) {
+        return { brand: item.brand, official: item.official, reason: `Lookalike typosquat of ${item.official}` };
+      }
+      // 3. Wrong TLD impersonation (e.g. phantom-wallet.org, raydium.app, pumpfun.com)
+      if (sld === offSld && host !== item.official) {
+        return { brand: item.brand, official: item.official, reason: `Unofficial domain extension for ${item.official}` };
+      }
+      // 4. Deceptive claim / airdrop / connect lure domain containing brand name
+      const lureRe = /(claim|airdrop|reward|drop|bonus|verify|connect|sync|restore|support|v2|portal|swap)/i;
+      if (item.keywords.some((kw) => host.includes(kw) || normSld.includes(kw)) && lureRe.test(host)) {
+        return { brand: item.brand, official: item.official, reason: `Suspected ${item.brand} drainer lure domain` };
+      }
+    }
+    return null;
+  }
+
+  function mountPhishingWarning(threat) {
+    if (document.getElementById('yuzu-phish-shield')) return;
+    const banner = document.createElement('div');
+    banner.id = 'yuzu-phish-shield';
+    Object.assign(banner.style, {
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      right: '0',
+      zIndex: '2147483647',
+      background: 'linear-gradient(90deg, #450a0a 0%, #7f1d1d 50%, #450a0a 100%)',
+      borderBottom: '2px solid #f87171',
+      color: '#ffffff',
+      padding: '12px 20px',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: '14px',
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+      fontSize: '12px',
+      boxShadow: '0 12px 36px rgba(0,0,0,0.85)',
+    });
+
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="background:#f87171;color:#05070a;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.08em">SECURITY ALERT</span>
+        <span><b>$YUZU SHIELD:</b> <u>${currentHost}</u> looks like a phishing clone (${threat.reason}). Do NOT connect your wallet or sign transactions.</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <a href="https://${threat.official}" style="background:#ffffff;color:#05070a;text-decoration:none;font-weight:700;padding:6px 12px;border-radius:5px;font-size:11px">GO TO ${threat.official.toUpperCase()}</a>
+        <button id="yuzu-phish-dismiss" style="background:rgba(0,0,0,0.4);color:#fecaca;border:1px solid rgba(255,255,255,0.3);padding:6px 10px;border-radius:5px;cursor:pointer;font-size:11px">DISMISS</button>
+      </div>
+    `;
+    document.body.appendChild(banner);
+    banner.querySelector('#yuzu-phish-dismiss')?.addEventListener('click', () => banner.remove());
+  }
+
+  const phishCheck = detectPhishingClone(currentHost);
+  if (phishCheck) mountPhishingWarning(phishCheck);
+
+  // =========================================================================
+  // 2. LOCAL SCREEN-TIME HEARTBEAT
+  // =========================================================================
   setInterval(() => {
     try {
       if (document.visibilityState === 'visible' && document.hasFocus() && chrome.runtime?.id) {
@@ -15,7 +144,9 @@
     } catch {}
   }, 15000);
 
-  // 2. Solana CA & Ticker Page Detector
+  // =========================================================================
+  // 3. SOLANA CA DETECTOR + LIVE INLINE X/TWITTER & FEED CA X-RAY BADGES
+  // =========================================================================
   function isLikelySolanaCA(s) {
     if (!s || s.length < 32 || s.length > 44) return false;
     if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s)) return false;
@@ -73,7 +204,7 @@
           ok: true,
           title: document.title || location.hostname,
           url: location.href,
-          host: location.hostname.replace(/^www\./, ''),
+          host: currentHost,
           selection,
           snippet: cleanSnippet,
           detectedCAs,
@@ -87,20 +218,6 @@
   });
 
   if (isYuzuTerminal) return;
-
-  // 3. Smoked Obsidian & Chrome Floating Widget (Synced with Custom Watchlist & Badge Coin)
-  let host = null;
-  let drawer = null;
-  let latestMarket = null;
-  let latestFG = null;
-  let latestSolNet = null;
-  let latestFocus = null;
-  let latestBadgeSym = 'SOL';
-  let inlineScanResult = null;
-  let inlineScanningCA = '';
-  let expanded = false;
-  let onMoveRef = null;
-  let onUpRef = null;
 
   function fmtPrice(p) {
     const n = Number(p) || 0;
@@ -120,6 +237,138 @@
   const fmtCompact = (n) =>
     n >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}K` : `$${Math.round(n)}`;
   const shortCA = (a) => (a ? `${a.slice(0, 5)}...${a.slice(-4)}` : '');
+
+  // Inject clean inline CA X-Ray badges directly inside X/Twitter posts, Telegram Web, Reddit & articles!
+  let inlineBadgesEnabled = true;
+  let injectedBadgeCount = 0;
+
+  function createInlineCaBadge(ca) {
+    const pill = document.createElement('span');
+    pill.className = 'yuzu-inline-ca-badge';
+    pill.setAttribute('data-yuzu-ca', ca);
+    Object.assign(pill.style, {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '5px',
+      margin: '0 4px',
+      padding: '2px 7px',
+      borderRadius: '5px',
+      background: 'rgba(8, 12, 19, 0.94)',
+      border: '1px solid rgba(155, 232, 255, 0.35)',
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+      fontSize: '10.5px',
+      lineHeight: '1.35',
+      color: '#e2e8f0',
+      verticalAlign: 'middle',
+      whiteSpace: 'nowrap',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
+    });
+    pill.textContent = 'YUZU: scanning CA...';
+
+    chrome.runtime.sendMessage({ type: 'QUICK_CA_META', ca }, (res) => {
+      if (chrome.runtime.lastError || !res?.ok || !res.meta) {
+        pill.remove();
+        return;
+      }
+      const m = res.meta;
+      const pctVal = Math.abs(m.pct24h) < 0.05 ? 0 : m.pct24h;
+      const pctCol = pctVal >= 0 ? '#c8ff78' : '#f87171';
+      const sign = pctVal >= 0 ? '+' : '';
+      const paidTag = m.dexPaid
+        ? `<span style="color:#c8ff78;background:rgba(200,255,120,0.14);padding:0 4px;border-radius:3px;font-size:9px;font-weight:700">PAID</span>`
+        : m.cto
+        ? `<span style="color:#9be8ff;background:rgba(155,232,255,0.14);padding:0 4px;border-radius:3px;font-size:9px;font-weight:700">CTO</span>`
+        : `<span style="color:#94a3b8;font-size:9px">UNPAID</span>`;
+
+      pill.innerHTML = `
+        <b style="color:#ffffff">$${m.sym}</b>
+        <span style="color:#cbd5e1">MC ${fmtCompact(m.mcap)}</span>
+        <span style="color:#94a3b8">Liq ${fmtCompact(m.liqUsd)}</span>
+        <b style="color:${pctCol}">${sign}${pctVal.toFixed(1)}%</b>
+        ${paidTag}
+        <button data-act="audit" title="Open full $YUZU audit" style="background:#e6ecf5;color:#05070a;border:none;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:800;cursor:pointer">SCAN</button>
+        <a href="https://jup.ag/swap/SOL-${encodeURIComponent(m.address)}" target="_blank" rel="noopener" style="color:#9be8ff;text-decoration:none;font-size:9px;font-weight:700">JUP</a>
+      `;
+
+      pill.querySelector('button[data-act="audit"]')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        chrome.runtime.sendMessage({ type: 'OPEN_SCAN_SIDEPANEL', ca: m.address });
+        // Also populate floating drawer right on page if mounted!
+        expanded = true;
+        if (drawer) drawer.style.display = 'block';
+        inlineScanningCA = m.address;
+        renderWidget();
+        chrome.runtime.sendMessage({ type: 'SCAN_TOKEN', query: m.address }, (sr) => {
+          inlineScanningCA = '';
+          if (!chrome.runtime.lastError && sr?.ok && sr.token) inlineScanResult = sr.token;
+          renderWidget();
+        });
+      });
+    });
+
+    return pill;
+  }
+
+  function scanDomForInlineBadges(root = document.body) {
+    if (!inlineBadgesEnabled || !root || injectedBadgeCount >= 18) return;
+    // Skip DEX terminal apps that already render native contract tables
+    if (/dexscreener\.com|birdeye\.so|solscan\.io|photon|gmgn\.ai|bullx\.io/i.test(currentHost)) return;
+
+    const selectors =
+      /x\.com|twitter\.com/i.test(currentHost)
+        ? '[data-testid="tweetText"]'
+        : 'p, article, [class*="message"], [class*="post"], li, div';
+    const containers = root.querySelectorAll ? root.querySelectorAll(selectors) : [];
+
+    for (let i = 0; i < Math.min(containers.length, 60); i++) {
+      if (injectedBadgeCount >= 18) break;
+      const el = containers[i];
+      if (!el || el.dataset?.yuzuCaScanned === '1') continue;
+      if (el.closest('#yuzu-ext-floating, #yuzu-phish-shield, input, textarea, pre, code, script, style')) continue;
+      // Only scan leaf-like text containers to avoid touching big layout wrappers
+      if (el.children.length > 8 && !el.matches?.('[data-testid="tweetText"]')) continue;
+
+      const txt = el.textContent || '';
+      if (txt.length < 32 || txt.length > 1200) continue;
+      const matches = txt.match(/\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g);
+      if (!matches) continue;
+
+      const validCa = matches.find(isLikelySolanaCA);
+      if (!validCa) continue;
+
+      el.dataset.yuzuCaScanned = '1';
+      if (el.querySelector(`.yuzu-inline-ca-badge[data-yuzu-ca="${validCa}"]`)) continue;
+
+      injectedBadgeCount++;
+      el.appendChild(createInlineCaBadge(validCa));
+    }
+  }
+
+  let domScanTimer = null;
+  const domObserver = new MutationObserver(() => {
+    if (!inlineBadgesEnabled) return;
+    clearTimeout(domScanTimer);
+    domScanTimer = setTimeout(() => scanDomForInlineBadges(document.body), 650);
+  });
+  domObserver.observe(document.body, { childList: true, subtree: true });
+  setTimeout(() => scanDomForInlineBadges(document.body), 800);
+
+  // =========================================================================
+  // 4. SMOKED OBSIDIAN & CHROME FLOATING WIDGET
+  // =========================================================================
+  let host = null;
+  let drawer = null;
+  let latestMarket = null;
+  let latestFG = null;
+  let latestSolNet = null;
+  let latestFocus = null;
+  let latestBadgeSym = 'SOL';
+  let inlineScanResult = null;
+  let inlineScanningCA = '';
+  let expanded = false;
+  let onMoveRef = null;
+  let onUpRef = null;
 
   function fmtCountdown(endsAt) {
     const sec = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
@@ -189,7 +438,7 @@
 
     const { detectedCAs } = extractPageSignals();
     let caSectionHtml = '';
-    if (detectedCAs.length) {
+    if (detectedCAs.length || inlineScanResult) {
       const caItems = detectedCAs
         .slice(0, 3)
         .map(
@@ -203,12 +452,12 @@
         .join('');
 
       const resultHtml = inlineScanResult
-        ? `<div style="margin-top:6px;padding:7px;border-radius:6px;background:rgba(155,232,255,0.06);border:1px solid rgba(155,232,255,0.28);font-size:10px;line-height:1.45">
+        ? `<div style="margin-top:6px;padding:7px;border-radius:6px;background:rgba(155,232,255,0.07);border:1px solid rgba(155,232,255,0.3);font-size:10px;line-height:1.45">
             <div style="display:flex;justify-content:space-between">
               <b style="color:#ffffff">${inlineScanResult.symbol} · ${fmtPrice(inlineScanResult.priceUsd)}</b>
               <b style="color:${inlineScanResult.safety.level === 'SAFE' ? '#c8ff78' : '#f87171'}">${inlineScanResult.safety.level}</b>
             </div>
-            <div style="color:#94a3b8;margin-top:2px">MCap ${fmtCompact(inlineScanResult.marketCap)} · Liq ${fmtCompact(inlineScanResult.liquidityUsd)} · Buys ${inlineScanResult.buyRatioPct}%</div>
+            <div style="color:#94a3b8;margin-top:2px">MCap ${fmtCompact(inlineScanResult.marketCap)} · Liq ${fmtCompact(inlineScanResult.liquidityUsd)} · ${inlineScanResult.dexStatus?.paid ? 'DEX PAID' : 'UNPAID'}${inlineScanResult.holders?.top10Pct != null ? ' · Top10 ' + inlineScanResult.holders.top10Pct + '%' : ''}</div>
           </div>`
         : '';
 
@@ -278,7 +527,7 @@
     drawer = document.createElement('div');
     Object.assign(drawer.style, {
       display: 'none',
-      width: '272px',
+      width: '280px',
       padding: '10px 12px',
       borderRadius: '10px',
       background: 'rgba(6, 8, 12, 0.96)',
@@ -376,6 +625,7 @@
     latestSolNet = st.solNetwork || null;
     latestFocus = st.focusState || null;
     latestBadgeSym = st.badgeSym || 'SOL';
+    inlineBadgesEnabled = st.widgetEnabled !== false;
     if (st.widgetEnabled !== false) mountWidget();
 
     if (!Array.isArray(latestMarket) || !latestMarket.length) {
@@ -396,8 +646,15 @@
       if (changes.focusState) latestFocus = changes.focusState.newValue;
       if (changes.badgeSym) latestBadgeSym = changes.badgeSym.newValue || 'SOL';
       if (changes.widgetEnabled) {
-        if (changes.widgetEnabled.newValue === false) unmountWidget();
-        else mountWidget();
+        inlineBadgesEnabled = changes.widgetEnabled.newValue !== false;
+        if (changes.widgetEnabled.newValue === false) {
+          unmountWidget();
+          document.querySelectorAll('.yuzu-inline-ca-badge').forEach((b) => b.remove());
+          injectedBadgeCount = 0;
+        } else {
+          mountWidget();
+          scanDomForInlineBadges(document.body);
+        }
       }
       renderWidget();
     });
